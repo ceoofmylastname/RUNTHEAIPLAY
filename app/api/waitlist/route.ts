@@ -1,0 +1,101 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
+
+type Payload = {
+  contact?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  };
+  answers?: {
+    foundation?: string;
+    dataLayer?: string;
+    engine?: string;
+    connections?: string;
+  };
+};
+
+const VALID_LETTERS = new Set(["A", "B", "C"]);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function bad(message: string, status = 400) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export async function POST(req: Request) {
+  let body: Payload;
+  try {
+    body = (await req.json()) as Payload;
+  } catch {
+    return bad("Invalid JSON payload.");
+  }
+
+  const c = body.contact ?? {};
+  const a = body.answers ?? {};
+
+  const firstName = c.firstName?.trim();
+  const lastName = c.lastName?.trim();
+  const email = c.email?.trim().toLowerCase();
+  const phone = c.phone?.trim();
+
+  if (!firstName || !lastName) return bad("First and last name are required.");
+  if (!email || !EMAIL_RE.test(email)) return bad("Valid email required.");
+  if (!phone || phone.length < 7) return bad("Valid phone required.");
+
+  const { foundation, dataLayer, engine, connections } = a;
+  for (const [k, v] of Object.entries({ foundation, dataLayer, engine, connections })) {
+    if (!v || !VALID_LETTERS.has(v)) {
+      return bad(`Missing or invalid answer: ${k}`);
+    }
+  }
+
+  try {
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: {
+        firstName,
+        lastName,
+        email,
+        phone,
+        answers: {
+          create: {
+            foundation: foundation!,
+            dataLayer: dataLayer!,
+            engine: engine!,
+            connections: connections!,
+          },
+        },
+      },
+      update: {
+        firstName,
+        lastName,
+        phone,
+        answers: {
+          upsert: {
+            create: {
+              foundation: foundation!,
+              dataLayer: dataLayer!,
+              engine: engine!,
+              connections: connections!,
+            },
+            update: {
+              foundation: foundation!,
+              dataLayer: dataLayer!,
+              engine: engine!,
+              connections: connections!,
+            },
+          },
+        },
+      },
+      include: { answers: true },
+    });
+
+    return NextResponse.json({ ok: true, id: user.id });
+  } catch (err) {
+    console.error("waitlist POST failed", err);
+    return bad("Could not save submission.", 500);
+  }
+}
