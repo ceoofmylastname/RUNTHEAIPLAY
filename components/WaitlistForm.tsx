@@ -503,17 +503,30 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-        className="mt-8 font-display text-3xl font-bold tracking-tight sm:text-4xl"
+        className="mt-8 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl"
       >
-        Access <span className="brand-text-gradient">Registered</span>.
+        Welcome to the{" "}
+        <span className="brand-text-gradient">Run The AI Play</span>{" "}
+        community.
       </motion.h2>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.8, ease: EASE }}
-        className="mt-3 text-base text-white/65"
+        transition={{ duration: 0.5, delay: 0.85, ease: EASE }}
+        className="mt-5 max-w-md text-[15px] leading-relaxed text-white/75"
       >
-        Watch your inbox.
+        Your invite to join the community lands in your inbox within the
+        next few days.
+      </motion.p>
+      <motion.p
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 1.05, ease: EASE }}
+        className="mt-3 max-w-md text-sm leading-relaxed text-white/50"
+      >
+        Until then, watch your inbox — we're sending the replay of our most
+        recent training. Once the community is live, every replay will live
+        there.
       </motion.p>
     </motion.div>
   );
