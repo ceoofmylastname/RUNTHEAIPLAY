@@ -14,7 +14,7 @@ export default function Home() {
         className="pointer-events-none fixed inset-0 z-[1]"
         style={{
           background:
-            "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(5,5,5,0.78) 100%)",
+            "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(5,5,5,0.55) 100%)",
         }}
       />
       <div
