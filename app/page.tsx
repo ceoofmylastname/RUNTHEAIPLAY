@@ -1,11 +1,26 @@
-import BackgroundGlow from "@/components/BackgroundGlow";
 import Logo from "@/components/Logo";
 import WaitlistForm from "@/components/WaitlistForm";
+import { WebGLShader } from "@/components/ui/web-gl-shader";
 
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050505]">
-      <BackgroundGlow />
+      {/* Animated WebGL chromatic-aberration shader (fixed full-viewport) */}
+      <WebGLShader />
+
+      {/* Subtle vignette + grain on top of the shader for depth and texture */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-[1]"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(5,5,5,0.78) 100%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-[1] noise-overlay"
+      />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
         <Logo size={36} />
