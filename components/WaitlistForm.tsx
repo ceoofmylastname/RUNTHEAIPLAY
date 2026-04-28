@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import AnswerButton from "./AnswerButton";
 import PrimaryButton from "./PrimaryButton";
@@ -13,7 +13,11 @@ import { fireDualConfetti } from "@/lib/confetti";
 // the user — we always advance to the success state and fire confetti. Any
 // network/API errors are logged to the console and silently ignored.
 
-const EASE = [0.16, 1, 0.3, 1] as const;
+// Snappy spring used everywhere a step transitions
+const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
+// Eased curve for non-spring micro-animations (text reveals, etc.)
+const EASE = [0.22, 1, 0.36, 1] as const;
+const ADVANCE_DELAY_MS = 300;
 
 type Contact = {
   firstName: string;
@@ -94,11 +98,14 @@ const QUESTIONS: Question[] = [
 
 const TOTAL_STEPS = 1 + QUESTIONS.length + 1;
 
-// Custom blur+slide transition (outgoing → blur+fade left, incoming → scale+slide right)
-const slideVariants = {
-  enter: { x: 80, opacity: 0, scale: 0.96, filter: "blur(8px)" },
-  center: { x: 0, opacity: 1, scale: 1, filter: "blur(0px)" },
-  exit: { x: -80, opacity: 0, scale: 0.98, filter: "blur(10px)" },
+// Step-level variants:
+// - exit: scale 0.95, opacity 0, slide left -50
+// - enter: from x: 50 + scale 0.95 + opacity 0
+// - center: x:0, scale 1, opacity 1
+const stepVariants: Variants = {
+  enter: { x: 50, scale: 0.95, opacity: 0 },
+  center: { x: 0, scale: 1, opacity: 1 },
+  exit: { x: -50, scale: 0.95, opacity: 0 },
 };
 
 export function WaitlistForm() {
@@ -118,6 +125,13 @@ export function WaitlistForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Lock to prevent the auto-advance from double-firing if the user
+  // mashes options during the 300ms registration window.
+  const advanceLock = useRef(false);
+  useEffect(() => {
+    advanceLock.current = false;
+  }, [step]);
+
   const contactValid = useMemo(() => {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return (
@@ -133,15 +147,8 @@ export function WaitlistForm() {
   const goNext = () => setStep((s) => Math.min(TOTAL_STEPS - 1, s + 1));
   const goBack = () => setStep((s) => Math.max(0, s - 1));
 
-  const handleAnswer = (key: AnswerKey, letter: "A" | "B" | "C") => {
-    setAnswers((prev) => ({ ...prev, [key]: letter }));
-    setTimeout(() => goNext(), 320);
-  };
-
   const handleSubmit = async () => {
     setSubmitting(true);
-    // Fire-and-forget the network call. Whatever happens server-side, the
-    // user sees the success screen — we never reveal failure.
     try {
       await fetch("/api/waitlist", {
         method: "POST",
@@ -160,10 +167,8 @@ export function WaitlistForm() {
     setStep(TOTAL_STEPS - 1);
   };
 
-  // Kick off the submission once we land on the completion step. Running
-  // inside useEffect (after render) guarantees `answers` reflects the user's
-  // last selection — calling handleSubmit() synchronously from the click
-  // handler would capture stale state.
+  // Submit once we land on the completion step. useEffect runs after render,
+  // so `answers` always reflects the user's last selection.
   useEffect(() => {
     if (step === TOTAL_STEPS - 1 && !submitted && !submitting) {
       void handleSubmit();
@@ -171,11 +176,9 @@ export function WaitlistForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Fire confetti as soon as we land on the success state
+  // Confetti on success
   useEffect(() => {
-    if (submitted) {
-      fireDualConfetti();
-    }
+    if (submitted) fireDualConfetti();
   }, [submitted]);
 
   const stepContent = (() => {
@@ -201,12 +204,16 @@ export function WaitlistForm() {
           questionNumber={qIndex + 1}
           totalQuestions={QUESTIONS.length}
           onSelect={(letter) => {
-            if (isLastQuestion) {
-              setAnswers((prev) => ({ ...prev, [q.key]: letter }));
-              setTimeout(() => enterCompletion(), 320);
-            } else {
-              handleAnswer(q.key, letter);
-            }
+            if (advanceLock.current) return;
+            advanceLock.current = true;
+            setAnswers((prev) => ({ ...prev, [q.key]: letter }));
+            setTimeout(() => {
+              if (isLastQuestion) {
+                enterCompletion();
+              } else {
+                goNext();
+              }
+            }, ADVANCE_DELAY_MS);
           }}
         />
       );
@@ -217,44 +224,54 @@ export function WaitlistForm() {
 
   return (
     <div className="relative w-full max-w-[640px]">
-      {/* Progress bar */}
+      {/* Sleek progress bar above the card */}
       <div className="mb-6 h-[3px] w-full overflow-hidden rounded-full bg-white/[0.06]">
         <motion.div
-          className="h-full bg-[linear-gradient(90deg,#06B6D4,#10B981)] shadow-[0_0_12px_rgba(6,182,212,0.6)]"
+          className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 shadow-[0_0_14px_rgba(6,182,212,0.55)]"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5, ease: EASE }}
+          transition={{ duration: 0.55, ease: EASE }}
         />
       </div>
 
-      {/* Glassmorphic panel */}
+      {/* Card + ambient glow stack */}
       <div className="relative">
-        {/* Soft pulsing glow behind the panel */}
-        <div
+        {/* Pulsing radial cyan→emerald ambient glow */}
+        <motion.div
           aria-hidden="true"
-          className="absolute -inset-6 -z-10 rounded-[36px] bg-cyan-brand/15 blur-3xl animate-pulse-glow"
+          className="pointer-events-none absolute -inset-12 -z-10 rounded-[44px]"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(16,185,129,0.15) 45%, rgba(0,0,0,0) 75%)",
+          }}
+          animate={{
+            opacity: [0.7, 1, 0.7],
+            scale: [1, 1.04, 1],
+          }}
+          transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
         />
+        {/* Soft secondary halo */}
         <div
           aria-hidden="true"
-          className="absolute -inset-10 -z-10 rounded-[36px] bg-emerald-500/10 blur-3xl"
+          className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-cyan-brand/10 blur-3xl"
         />
 
         <div
           className={[
-            "relative rounded-[24px] p-8 sm:p-10",
-            "bg-black/40 backdrop-blur-xl",
+            "relative rounded-[32px] p-8 sm:p-10",
+            "bg-white/5 backdrop-blur-2xl",
             "border border-white/10",
-            "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)]",
+            "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)]",
             "overflow-hidden",
           ].join(" ")}
         >
-          {/* Inner highlight line for premium feel */}
+          {/* Top inner highlight */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
           />
 
-          {/* Step counter + back */}
+          {/* Header row */}
           {!submitted && (
             <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white/40">
               <span>
@@ -277,11 +294,11 @@ export function WaitlistForm() {
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={step}
-                variants={slideVariants}
+                variants={stepVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.55, ease: EASE }}
+                transition={SPRING}
               >
                 {stepContent}
               </motion.div>
@@ -297,6 +314,8 @@ export function WaitlistForm() {
     </div>
   );
 }
+
+/* ───────────────────────── Step components ───────────────────────── */
 
 function ContactStep({
   contact,
@@ -371,6 +390,25 @@ function ContactStep({
   );
 }
 
+// Stagger orchestration for the question step
+const questionContainerVariants: Variants = {
+  initial: {},
+  enter: {
+    transition: {
+      delayChildren: 0.1,
+      staggerChildren: 0.1,
+    },
+  },
+};
+const questionItemVariants: Variants = {
+  initial: { opacity: 0, y: 14 },
+  enter: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.45, ease: EASE },
+  },
+};
+
 function QuestionStep({
   question,
   selected,
@@ -385,33 +423,47 @@ function QuestionStep({
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
   return (
-    <div>
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand">
+    <motion.div
+      variants={questionContainerVariants}
+      initial="initial"
+      animate="enter"
+    >
+      <motion.p
+        variants={questionItemVariants}
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand"
+      >
         {question.subhead} ·{" "}
         <span className="text-white/40">
           Question {questionNumber} / {totalQuestions}
         </span>
-      </p>
-      <h2 className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+      </motion.p>
+      <motion.h2
+        variants={questionItemVariants}
+        className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl"
+      >
         {question.headline}
-      </h2>
+      </motion.h2>
 
       <div className="mt-8 space-y-3">
         {question.options.map((opt) => (
-          <AnswerButton
-            key={opt.letter}
-            letter={opt.letter}
-            label={opt.label}
-            selected={selected === opt.letter}
-            onClick={() => onSelect(opt.letter)}
-          />
+          <motion.div key={opt.letter} variants={questionItemVariants}>
+            <AnswerButton
+              letter={opt.letter}
+              label={opt.label}
+              selected={selected === opt.letter}
+              onClick={() => onSelect(opt.letter)}
+            />
+          </motion.div>
         ))}
       </div>
 
-      <p className="mt-6 text-xs text-white/35">
-        Tap to select — we'll auto-advance to the next question.
-      </p>
-    </div>
+      <motion.p
+        variants={questionItemVariants}
+        className="mt-6 text-xs text-white/35"
+      >
+        Tap any answer — we'll auto-advance.
+      </motion.p>
+    </motion.div>
   );
 }
 
