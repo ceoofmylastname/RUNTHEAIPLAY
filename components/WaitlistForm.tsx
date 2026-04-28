@@ -158,8 +158,18 @@ export function WaitlistForm() {
 
   const enterCompletion = () => {
     setStep(TOTAL_STEPS - 1);
-    void handleSubmit();
   };
+
+  // Kick off the submission once we land on the completion step. Running
+  // inside useEffect (after render) guarantees `answers` reflects the user's
+  // last selection — calling handleSubmit() synchronously from the click
+  // handler would capture stale state.
+  useEffect(() => {
+    if (step === TOTAL_STEPS - 1 && !submitted && !submitting) {
+      void handleSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   // Fire confetti as soon as we land on the success state
   useEffect(() => {
