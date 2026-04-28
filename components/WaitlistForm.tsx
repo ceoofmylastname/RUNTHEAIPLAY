@@ -18,6 +18,18 @@ const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
 const EASE = [0.22, 1, 0.36, 1] as const;
 const ADVANCE_DELAY_MS = 300;
 
+// ─────────────────────────────────────────────────────────
+// Animated gradient typography styles
+// ─────────────────────────────────────────────────────────
+// Pure white text with mix-blend-mode washed out when the orb passed behind
+// it. Replaced with a continuously-animating multi-color gradient + tight
+// dark drop-shadow. The gradient is bg-clipped to the text and animates
+// `background-position` 0% → 100% → 0% via the `gradient` keyframe defined
+// in tailwind.config.ts. The drop-shadow keeps every glyph crisp regardless
+// of what brand color is animating behind it.
+const GRADIENT_TEXT_BASE =
+  "bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]";
+
 type Contact = {
   firstName: string;
   lastName: string;
@@ -25,7 +37,12 @@ type Contact = {
   phone: string;
 };
 
-type AnswerKey = "foundation" | "dataLayer" | "engine" | "connections";
+type AnswerKey =
+  | "aiWebsites"
+  | "knowledge"
+  | "copywriting"
+  | "dataSystems"
+  | "bigPicture";
 type Answers = Record<AnswerKey, "A" | "B" | "C" | null>;
 
 type Question = {
@@ -37,59 +54,102 @@ type Question = {
 
 const QUESTIONS: Question[] = [
   {
-    key: "foundation",
+    key: "aiWebsites",
     headline:
-      "What is the primary difference between a traditional website and an AI website?",
-    subhead: "The Foundation",
+      "What is the critical difference between a traditional landing page and an AI-native website?",
+    subhead: "AI Websites",
     options: [
-      { letter: "A", label: "AI websites are built faster using visual builders." },
-      { letter: "B", label: "AI websites have chatbots installed on the homepage." },
+      {
+        letter: "A",
+        label: "AI websites are built faster using visual drag-and-drop builders.",
+      },
+      {
+        letter: "B",
+        label: "AI websites have personalized chatbots installed on the homepage.",
+      },
       {
         letter: "C",
         label:
-          "AI websites are structurally engineered with semantic data so LLMs can read them.",
+          "AI websites are structurally engineered with semantic data for LLMs to cite them.",
       },
     ],
   },
   {
-    key: "dataLayer",
-    headline: "How comfortable are you with deploying JSON-LD schema markup?",
-    subhead: "The Data Layer",
-    options: [
-      { letter: "A", label: "I don't know what that is." },
-      { letter: "B", label: "I use standard plugins to auto-generate it." },
-      {
-        letter: "C",
-        label:
-          "I manually inject custom schemas (Organization, FAQ) into the code.",
-      },
-    ],
-  },
-  {
-    key: "engine",
+    key: "knowledge",
     headline:
-      "What is your current strategy for AEO/GEO (ChatGPT & Perplexity)?",
-    subhead: "The Engine",
+      "How do you currently map and organize your marketing campaigns and AI prompts?",
+    subhead: "Knowledge & Note-Taking",
     options: [
-      { letter: "A", label: "I'm just trying to rank on Google." },
-      { letter: "B", label: "I write blogs and hope the AI picks them up." },
+      { letter: "A", label: "Paper notebooks and scattered Google Docs." },
+      {
+        letter: "B",
+        label:
+          "Basic linear note-takers (Apple Notes, Google Keep, Evernote).",
+      },
       {
         letter: "C",
-        label: "I map entities and enforce strict H1/H2 semantic hierarchies.",
+        label:
+          "An interconnected knowledge base (like Obsidian) to map contextual relationships.",
       },
     ],
   },
   {
-    key: "connections",
-    headline: "What is your experience level with REST APIs?",
-    subhead: "The Connections",
+    key: "copywriting",
+    headline:
+      "When writing high-ticket marketing copy or executing frameworks, which environment do you rely on?",
+    subhead: "Copywriting & Execution",
     options: [
-      { letter: "A", label: "What is an API?" },
-      { letter: "B", label: "I use Zapier or Make to connect basic apps." },
+      {
+        letter: "A",
+        label: "I ask standard ChatGPT to write the whole thing for me.",
+      },
+      {
+        letter: "B",
+        label: "I use Claude Chat for basic formatting and tone adjustments.",
+      },
       {
         letter: "C",
         label:
-          "I can read documentation and build custom webhooks from scratch.",
+          "I use advanced environments like Claude Co-work or Claude Code to build and refine specific frameworks.",
+      },
+    ],
+  },
+  {
+    key: "dataSystems",
+    headline:
+      "How do you handle complex data analysis, scraping, or advanced AI workflows?",
+    subhead: "Data & Systems",
+    options: [
+      { letter: "A", label: "I don't. That's too technical for me." },
+      {
+        letter: "B",
+        label: "I use no-code tools like Zapier or Make to connect basic apps.",
+      },
+      {
+        letter: "C",
+        label:
+          "I run custom Python scripts in Jupyter Notebooks or use agentic coding tools.",
+      },
+    ],
+  },
+  {
+    key: "bigPicture",
+    headline:
+      "What is your primary goal for integrating AI into your digital marketing operations?",
+    subhead: "The Big Picture",
+    options: [
+      {
+        letter: "A",
+        label: "Generating endless amounts of blog posts and social media content.",
+      },
+      {
+        letter: "B",
+        label: "Firing my current team to save money on payroll.",
+      },
+      {
+        letter: "C",
+        label:
+          "Building automated systems that scale revenue and client fulfillment without scaling headcount.",
       },
     ],
   },
@@ -103,20 +163,6 @@ const stepVariants: Variants = {
   exit: { x: -50, scale: 0.95, opacity: 0 },
 };
 
-// ─────────────────────────────────────────────────────────
-// Layer modes
-// ─────────────────────────────────────────────────────────
-// We render each step TWICE — once in the Form Layer (interactive
-// widgets, NO blend) and once in the Text Overlay (typography only,
-// mix-blend-difference). The mode prop controls which parts are visible
-// vs invisible-but-space-reserving in each layer, so layouts align.
-type StepMode = "form" | "text";
-
-const HIDE_STYLE = {
-  visibility: "hidden" as const,
-  pointerEvents: "none" as const,
-};
-
 export function WaitlistForm() {
   const [step, setStep] = useState(0);
   const [contact, setContact] = useState<Contact>({
@@ -126,10 +172,11 @@ export function WaitlistForm() {
     phone: "",
   });
   const [answers, setAnswers] = useState<Answers>({
-    foundation: null,
-    dataLayer: null,
-    engine: null,
-    connections: null,
+    aiWebsites: null,
+    knowledge: null,
+    copywriting: null,
+    dataSystems: null,
+    bigPicture: null,
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -185,11 +232,10 @@ export function WaitlistForm() {
     if (submitted) fireDualConfetti();
   }, [submitted]);
 
-  const renderStep = (mode: StepMode) => {
+  const stepContent = (() => {
     if (step === 0) {
       return (
         <ContactStep
-          mode={mode}
           contact={contact}
           setContact={setContact}
           canContinue={contactValid}
@@ -204,7 +250,6 @@ export function WaitlistForm() {
       const isLastQuestion = qIndex === QUESTIONS.length - 1;
       return (
         <QuestionStep
-          mode={mode}
           question={q}
           selected={answers[q.key]}
           questionNumber={qIndex + 1}
@@ -225,14 +270,8 @@ export function WaitlistForm() {
       );
     }
 
-    return (
-      <CompletionStep
-        mode={mode}
-        submitting={submitting}
-        submitted={submitted}
-      />
-    );
-  };
+    return <CompletionStep submitting={submitting} submitted={submitted} />;
+  })();
 
   return (
     <div className="relative w-full max-w-[640px]">
@@ -246,23 +285,9 @@ export function WaitlistForm() {
         />
       </div>
 
-      {/*
-        TWO-LAYER ARCHITECTURE (preserves spring slide + clean inputs)
-        ──────────────────────────────────────────────────────────────
-        Layer 1 — BrandOrb (absolute, base): the moving brand-color light
-        Layer 2 — Glass (absolute z-0, EMPTY, pointer-events-none):
-                  backdrop-blur card. No children so its stacking context
-                  doesn't trap any text.
-        Layer 3 — Form Layer (relative z-10): all interactive widgets
-                  (header, inputs, primary button, answer buttons). NO
-                  blend mode, so inputs stay perfectly readable.
-        Layer 4 — Text Overlay (absolute z-20, pointer-events-none,
-                  mix-blend-difference): typography only. Sibling of
-                  Form Layer, so its blend mode pierces directly to the
-                  orb beneath via the wrapper's stacking context.
-        Both layers run synchronized AnimatePresence with the same
-        stepVariants → visually a single slide animation.
-      */}
+      {/* Single-layer card stack — no more mix-blend-mode.
+          Headlines use animated gradient text + dark drop-shadow for
+          per-letter readability over the moving orb behind. */}
       <div className="relative isolate">
         {/* (1) Base layer — moving brand-color light */}
         <BrandOrb />
@@ -273,7 +298,7 @@ export function WaitlistForm() {
           className="pointer-events-none absolute inset-0 z-0 rounded-[32px] border border-white/10 bg-white/5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)] backdrop-blur-2xl"
         />
 
-        {/* (3) Form Layer — interactive, no blend */}
+        {/* (3) Content — interactive form, no blend modes */}
         <div className="relative z-10 p-8 sm:p-10">
           {!submitted && (
             <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white/55">
@@ -303,36 +328,7 @@ export function WaitlistForm() {
                 exit="exit"
                 transition={SPRING}
               >
-                {renderStep("form")}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* (4) Text Overlay — typography only, mix-blend-difference */}
-        <div className="pointer-events-none absolute inset-0 z-20 p-8 sm:p-10 mix-blend-difference">
-          {/* Invisible header placeholder so layout matches Form Layer exactly */}
-          {!submitted && (
-            <div
-              aria-hidden="true"
-              style={HIDE_STYLE}
-              className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em]"
-            >
-              <span>Step 0 / {TOTAL_STEPS}</span>
-            </div>
-          )}
-
-          <div className="relative min-h-[440px]">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={step}
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={SPRING}
-              >
-                {renderStep("text")}
+                {stepContent}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -349,51 +345,35 @@ export function WaitlistForm() {
 
 /* ───────────────────────── Step components ───────────────────────── */
 
-type StepProps = { mode: StepMode };
-
-const visIf = (visible: boolean) => (visible ? undefined : HIDE_STYLE);
-
 function ContactStep({
-  mode,
   contact,
   setContact,
   canContinue,
   onContinue,
-}: StepProps & {
+}: {
   contact: Contact;
   setContact: React.Dispatch<React.SetStateAction<Contact>>;
   canContinue: boolean;
   onContinue: () => void;
 }) {
-  const text = mode === "text";
-  const form = mode === "form";
-
   return (
     <div>
-      <p
-        style={visIf(text)}
-        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white"
-      >
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         The Hook
       </p>
       <h1
-        style={visIf(text)}
-        className="mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-[40px]"
+        className={`mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-tight sm:text-[40px] ${GRADIENT_TEXT_BASE}`}
       >
         The AI Play is loading.
         <br />
         Secure your spot.
       </h1>
-      <p
-        style={visIf(text)}
-        className="mt-4 text-[15px] font-medium text-white"
-      >
+      <p className="mt-4 text-[15px] font-medium text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         We're hand-selecting operators who understand the AI-native web.
         Start with the basics.
       </p>
 
       <form
-        style={visIf(form)}
         className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
@@ -405,7 +385,7 @@ function ContactStep({
           value={contact.firstName}
           onChange={(v) => setContact((c) => ({ ...c, firstName: v }))}
           autoComplete="given-name"
-          autoFocus={form}
+          autoFocus
         />
         <FloatingLabelInput
           label="Last name"
@@ -459,22 +439,18 @@ const questionItemVariants: Variants = {
 };
 
 function QuestionStep({
-  mode,
   question,
   selected,
   questionNumber,
   totalQuestions,
   onSelect,
-}: StepProps & {
+}: {
   question: Question;
   selected: "A" | "B" | "C" | null;
   questionNumber: number;
   totalQuestions: number;
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
-  const text = mode === "text";
-  const form = mode === "form";
-
   return (
     <motion.div
       variants={questionContainerVariants}
@@ -483,23 +459,21 @@ function QuestionStep({
     >
       <motion.p
         variants={questionItemVariants}
-        style={visIf(text)}
-        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white"
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
       >
         {question.subhead} ·{" "}
-        <span style={{ opacity: 0.6 }}>
+        <span className="text-white/50">
           Question {questionNumber} / {totalQuestions}
         </span>
       </motion.p>
       <motion.h2
         variants={questionItemVariants}
-        style={visIf(text)}
-        className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl"
+        className={`mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl ${GRADIENT_TEXT_BASE}`}
       >
         {question.headline}
       </motion.h2>
 
-      <div style={visIf(form)} className="mt-8 space-y-3">
+      <div className="mt-8 space-y-3">
         {question.options.map((opt) => (
           <motion.div key={opt.letter} variants={questionItemVariants}>
             <AnswerButton
@@ -514,8 +488,7 @@ function QuestionStep({
 
       <motion.p
         variants={questionItemVariants}
-        style={{ ...visIf(text), opacity: 0.6 }}
-        className="mt-6 text-xs font-medium text-white"
+        className="mt-6 text-xs font-medium text-white/65 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]"
       >
         Tap any answer — we'll auto-advance.
       </motion.p>
@@ -524,30 +497,23 @@ function QuestionStep({
 }
 
 function CompletionStep({
-  mode,
   submitting,
   submitted,
-}: StepProps & {
+}: {
   submitting: boolean;
   submitted: boolean;
 }) {
-  const text = mode === "text";
-  const form = mode === "form";
-
   if (submitting || !submitted) {
     return (
-      <div
-        style={visIf(form)}
-        className="flex min-h-[400px] flex-col items-center justify-center text-center"
-      >
+      <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
         <div className="relative">
           <div className="absolute inset-0 -z-10 animate-pulse-glow rounded-full bg-cyan-brand/30 blur-2xl" />
           <Loader2 className="h-14 w-14 animate-spin text-cyan-brand" />
         </div>
-        <h2 className="mt-8 font-display text-2xl font-bold text-white">
+        <h2 className="mt-8 font-display text-2xl font-extrabold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
           Securing your spot…
         </h2>
-        <p className="mt-2 text-sm text-white/60">
+        <p className="mt-2 text-sm text-white/65 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
           Encrypting payload · Writing to ledger · Provisioning access
         </p>
       </div>
@@ -561,17 +527,12 @@ function CompletionStep({
       transition={{ duration: 0.6, ease: EASE }}
       className="flex min-h-[400px] flex-col items-center justify-center text-center"
     >
-      {/* Animated checkmark — visual element, lives in form layer (no blend) */}
-      <div style={visIf(form)}>
-        <AnimatedCheck size={104} />
-      </div>
-
+      <AnimatedCheck size={104} />
       <motion.h2
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-        style={visIf(text)}
-        className="mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl"
+        className={`mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl ${GRADIENT_TEXT_BASE}`}
       >
         Welcome to the Run The AI Play community.
       </motion.h2>
@@ -579,8 +540,7 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.85, ease: EASE }}
-        style={visIf(text)}
-        className="mt-5 max-w-md text-[15px] font-medium leading-relaxed text-white"
+        className="mt-5 max-w-md text-[15px] font-medium leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
       >
         Your invite to join the community lands in your inbox within the
         next few days.
@@ -589,8 +549,7 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 1.05, ease: EASE }}
-        style={{ ...visIf(text), opacity: 0.65 }}
-        className="mt-3 max-w-md text-sm font-medium leading-relaxed text-white"
+        className="mt-3 max-w-md text-sm font-medium leading-relaxed text-white/70 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]"
       >
         Until then, watch your inbox — we're sending the replay of our most
         recent training. Once the community is live, every replay will live

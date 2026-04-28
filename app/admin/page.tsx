@@ -26,10 +26,11 @@ export default async function AdminPage() {
     createdAt: u.createdAt.toISOString(),
     answers: u.answers
       ? {
-          foundation: u.answers.foundation,
-          dataLayer: u.answers.dataLayer,
-          engine: u.answers.engine,
-          connections: u.answers.connections,
+          aiWebsites: u.answers.aiWebsites,
+          knowledge: u.answers.knowledge,
+          copywriting: u.answers.copywriting,
+          dataSystems: u.answers.dataSystems,
+          bigPicture: u.answers.bigPicture,
         }
       : null,
   }));

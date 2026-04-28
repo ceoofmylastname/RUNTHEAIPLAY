@@ -19,12 +19,13 @@ model User {
 }
 
 model AssessmentAnswers {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  foundation  String
-  dataLayer   String
-  engine      String
-  connections String
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiWebsites   String
+  knowledge    String
+  copywriting  String
+  dataSystems  String
+  bigPicture   String
+  createdAt    DateTime @default(now())
 }

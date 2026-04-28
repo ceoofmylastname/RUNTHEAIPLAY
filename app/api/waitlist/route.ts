@@ -12,10 +12,11 @@ type Payload = {
     phone?: string;
   };
   answers?: {
-    foundation?: string;
-    dataLayer?: string;
-    engine?: string;
-    connections?: string;
+    aiWebsites?: string;
+    knowledge?: string;
+    copywriting?: string;
+    dataSystems?: string;
+    bigPicture?: string;
   };
 };
 
@@ -46,8 +47,14 @@ export async function POST(req: Request) {
   if (!email || !EMAIL_RE.test(email)) return bad("Valid email required.");
   if (!phone || phone.length < 7) return bad("Valid phone required.");
 
-  const { foundation, dataLayer, engine, connections } = a;
-  for (const [k, v] of Object.entries({ foundation, dataLayer, engine, connections })) {
+  const { aiWebsites, knowledge, copywriting, dataSystems, bigPicture } = a;
+  for (const [k, v] of Object.entries({
+    aiWebsites,
+    knowledge,
+    copywriting,
+    dataSystems,
+    bigPicture,
+  })) {
     if (!v || !VALID_LETTERS.has(v)) {
       return bad(`Missing or invalid answer: ${k}`);
     }
@@ -71,10 +78,11 @@ export async function POST(req: Request) {
         phone,
         answers: {
           create: {
-            foundation: foundation!,
-            dataLayer: dataLayer!,
-            engine: engine!,
-            connections: connections!,
+            aiWebsites: aiWebsites!,
+            knowledge: knowledge!,
+            copywriting: copywriting!,
+            dataSystems: dataSystems!,
+            bigPicture: bigPicture!,
           },
         },
       },
@@ -85,16 +93,18 @@ export async function POST(req: Request) {
         answers: {
           upsert: {
             create: {
-              foundation: foundation!,
-              dataLayer: dataLayer!,
-              engine: engine!,
-              connections: connections!,
+              aiWebsites: aiWebsites!,
+              knowledge: knowledge!,
+              copywriting: copywriting!,
+              dataSystems: dataSystems!,
+              bigPicture: bigPicture!,
             },
             update: {
-              foundation: foundation!,
-              dataLayer: dataLayer!,
-              engine: engine!,
-              connections: connections!,
+              aiWebsites: aiWebsites!,
+              knowledge: knowledge!,
+              copywriting: copywriting!,
+              dataSystems: dataSystems!,
+              bigPicture: bigPicture!,
             },
           },
         },

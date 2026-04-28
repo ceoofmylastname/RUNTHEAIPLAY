@@ -21,43 +21,50 @@ type Lead = {
   phone: string;
   createdAt: string;
   answers: {
-    foundation: string;
-    dataLayer: string;
-    engine: string;
-    connections: string;
+    aiWebsites: string;
+    knowledge: string;
+    copywriting: string;
+    dataSystems: string;
+    bigPicture: string;
   } | null;
 };
 
 const QUESTION_LABELS: Record<keyof NonNullable<Lead["answers"]>, string> = {
-  foundation: "Foundation — AI vs Traditional Site",
-  dataLayer: "Data Layer — JSON-LD Schema",
-  engine: "Engine — AEO/GEO Strategy",
-  connections: "Connections — REST API Experience",
+  aiWebsites: "AI Websites — Traditional vs AI-native",
+  knowledge: "Knowledge & Note-Taking",
+  copywriting: "Copywriting & Execution Environment",
+  dataSystems: "Data & Systems",
+  bigPicture: "Big Picture — Goal for AI in Marketing",
 };
 
 const QUESTION_OPTIONS: Record<
   keyof NonNullable<Lead["answers"]>,
   Record<"A" | "B" | "C", string>
 > = {
-  foundation: {
-    A: "AI websites are built faster using visual builders.",
-    B: "AI websites have chatbots installed on the homepage.",
-    C: "AI websites are structurally engineered with semantic data so LLMs can read them.",
+  aiWebsites: {
+    A: "AI websites are built faster using visual drag-and-drop builders.",
+    B: "AI websites have personalized chatbots installed on the homepage.",
+    C: "AI websites are structurally engineered with semantic data for LLMs to cite them.",
   },
-  dataLayer: {
-    A: "I don't know what that is.",
-    B: "I use standard plugins to auto-generate it.",
-    C: "I manually inject custom schemas (Organization, FAQ) into the code.",
+  knowledge: {
+    A: "Paper notebooks and scattered Google Docs.",
+    B: "Basic linear note-takers (Apple Notes, Google Keep, Evernote).",
+    C: "An interconnected knowledge base (like Obsidian) to map contextual relationships.",
   },
-  engine: {
-    A: "I'm just trying to rank on Google.",
-    B: "I write blogs and hope the AI picks them up.",
-    C: "I map entities and enforce strict H1/H2 semantic hierarchies.",
+  copywriting: {
+    A: "I ask standard ChatGPT to write the whole thing for me.",
+    B: "I use Claude Chat for basic formatting and tone adjustments.",
+    C: "I use advanced environments like Claude Co-work or Claude Code to build and refine specific frameworks.",
   },
-  connections: {
-    A: "What is an API?",
-    B: "I use Zapier or Make to connect basic apps.",
-    C: "I can read documentation and build custom webhooks from scratch.",
+  dataSystems: {
+    A: "I don't. That's too technical for me.",
+    B: "I use no-code tools like Zapier or Make to connect basic apps.",
+    C: "I run custom Python scripts in Jupyter Notebooks or use agentic coding tools.",
+  },
+  bigPicture: {
+    A: "Generating endless amounts of blog posts and social media content.",
+    B: "Firing my current team to save money on payroll.",
+    C: "Building automated systems that scale revenue and client fulfillment without scaling headcount.",
   },
 };
 
@@ -65,18 +72,19 @@ function technicalScore(a: Lead["answers"]): number {
   if (!a) return 0;
   const map: Record<string, number> = { A: 0, B: 1, C: 2 };
   return (
-    (map[a.foundation] ?? 0) +
-    (map[a.dataLayer] ?? 0) +
-    (map[a.engine] ?? 0) +
-    (map[a.connections] ?? 0)
+    (map[a.aiWebsites] ?? 0) +
+    (map[a.knowledge] ?? 0) +
+    (map[a.copywriting] ?? 0) +
+    (map[a.dataSystems] ?? 0) +
+    (map[a.bigPicture] ?? 0)
   );
 }
 
 function scoreTier(score: number) {
-  // Max score = 8
-  if (score >= 7)
+  // Max score = 10 (5 questions × 2 max)
+  if (score >= 8)
     return { label: "Operator", className: "from-green-brand to-cyan-brand" };
-  if (score >= 4)
+  if (score >= 5)
     return { label: "Practitioner", className: "from-cyan-brand to-indigo-brand" };
   return { label: "Beginner", className: "from-indigo-brand to-indigo-brand" };
 }
@@ -105,10 +113,11 @@ function leadsToCsv(leads: Lead[]): string {
     "Phone",
     "Submitted At",
     "Score",
-    "Foundation",
-    "Data Layer",
-    "Engine",
-    "Connections",
+    "AI Websites",
+    "Knowledge",
+    "Copywriting",
+    "Data Systems",
+    "Big Picture",
   ].join(",");
 
   const rows = leads.map((l) => {
@@ -120,10 +129,11 @@ function leadsToCsv(leads: Lead[]): string {
       l.phone,
       l.createdAt,
       String(technicalScore(a)),
-      a?.foundation ?? "",
-      a?.dataLayer ?? "",
-      a?.engine ?? "",
-      a?.connections ?? "",
+      a?.aiWebsites ?? "",
+      a?.knowledge ?? "",
+      a?.copywriting ?? "",
+      a?.dataSystems ?? "",
+      a?.bigPicture ?? "",
     ]
       .map(csvEscape)
       .join(",");

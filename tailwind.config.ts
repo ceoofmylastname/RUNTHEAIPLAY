@@ -47,10 +47,15 @@ const config: Config = {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
+        gradient: {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
       },
       animation: {
         "pulse-glow": "pulseGlow 6s ease-in-out infinite",
         "border-shimmer": "borderShimmer 4s ease-in-out infinite",
+        gradient: "gradient 6s ease-in-out infinite",
       },
     },
   },

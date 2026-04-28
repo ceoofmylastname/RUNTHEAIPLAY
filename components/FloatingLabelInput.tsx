@@ -41,7 +41,7 @@ export function FloatingLabelInput({
         className,
       ].join(" ")}
     >
-      <div className="relative rounded-[14px] bg-[#131315] transition-colors duration-300">
+      <div className="relative rounded-[14px] bg-black/60 backdrop-blur-sm transition-colors duration-300">
         <label
           htmlFor={id}
           className={[
@@ -64,7 +64,7 @@ export function FloatingLabelInput({
           autoFocus={autoFocus}
           className={[
             "w-full bg-transparent outline-none",
-            "px-4 pb-2.5 pt-6 text-[15px] font-medium text-white",
+            "px-4 pb-2.5 pt-6 text-[15px] font-semibold text-cyan-brand",
             "placeholder:text-transparent",
           ].join(" ")}
           placeholder={label}
