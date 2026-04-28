@@ -56,9 +56,13 @@ const config: Config = {
         // back out (revealing the white text underneath), while also
         // sweeping the background-position so the colors themselves move
         // when visible. White → moving gradient → white, on a loop.
+        // The 40–60% plateau holds the gradient at full opacity through
+        // the middle of the cycle (~1.2s at 6s duration) so the colors
+        // get to land instead of just flicker through.
         gradientPulse: {
-          "0%": { opacity: "0", backgroundPosition: "0% 50%" },
-          "50%": { opacity: "1", backgroundPosition: "100% 50%" },
+          "0%":   { opacity: "0", backgroundPosition: "0% 50%" },
+          "40%":  { opacity: "1", backgroundPosition: "80% 50%" },
+          "60%":  { opacity: "1", backgroundPosition: "120% 50%" },
           "100%": { opacity: "0", backgroundPosition: "200% 50%" },
         },
       },
