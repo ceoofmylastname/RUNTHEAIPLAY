@@ -5,18 +5,12 @@ import { WebGLShader } from "@/components/ui/web-gl-shader";
 export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#050505]">
-      {/* Animated WebGL chromatic-aberration shader (fixed full-viewport) */}
+      {/* Animated WebGL chromatic-aberration shader (fixed full-viewport).
+          Renders pure matte black everywhere except the moving brand-color
+          streak, so the background stays dark and only the wave brings light. */}
       <WebGLShader />
 
-      {/* Subtle vignette + grain on top of the shader for depth and texture */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-[1]"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(5,5,5,0.55) 100%)",
-        }}
-      />
+      {/* Subtle film grain on top — preserves the matte-black feel */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-[1] noise-overlay"
