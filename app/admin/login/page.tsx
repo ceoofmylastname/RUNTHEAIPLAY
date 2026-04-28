@@ -4,6 +4,7 @@ import BackgroundGlow from "@/components/BackgroundGlow";
 import AdminLoginForm from "@/components/AdminLoginForm";
 import { isAdminAuthenticated } from "@/lib/auth";
 
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export default function AdminLoginPage() {

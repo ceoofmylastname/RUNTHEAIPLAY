@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/email";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 type Payload = {
   contact?: {
@@ -61,6 +61,8 @@ export async function POST(req: Request) {
   }
 
   try {
+    const prisma = getPrisma();
+
     // Pre-check existence so we only send the welcome email on the user's
     // FIRST submission (re-submissions update their record but don't re-spam).
     const existing = await prisma.user.findUnique({

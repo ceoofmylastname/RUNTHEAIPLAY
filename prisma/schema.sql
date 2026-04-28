@@ -1,26 +1,24 @@
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "firstName" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
 CREATE TABLE "AssessmentAnswers" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
-    "foundation" TEXT NOT NULL,
-    "dataLayer" TEXT NOT NULL,
-    "engine" TEXT NOT NULL,
-    "connections" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "AssessmentAnswers_pkey" PRIMARY KEY ("id")
+    "aiWebsites" TEXT NOT NULL,
+    "knowledge" TEXT NOT NULL,
+    "copywriting" TEXT NOT NULL,
+    "dataSystems" TEXT NOT NULL,
+    "bigPicture" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "AssessmentAnswers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateIndex
@@ -28,7 +26,4 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AssessmentAnswers_userId_key" ON "AssessmentAnswers"("userId");
-
--- AddForeignKey
-ALTER TABLE "AssessmentAnswers" ADD CONSTRAINT "AssessmentAnswers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

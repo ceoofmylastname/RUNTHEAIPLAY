@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ADMIN_COOKIE_NAME, getAdminPassword } from "@/lib/auth";
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
 export async function POST(req: Request) {
   let body: { password?: string };

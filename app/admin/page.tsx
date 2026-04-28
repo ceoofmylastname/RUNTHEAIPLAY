@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import Logo from "@/components/Logo";
 import AdminDashboard from "@/components/AdminDashboard";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
@@ -11,6 +12,7 @@ export default async function AdminPage() {
     redirect("/admin/login");
   }
 
+  const prisma = getPrisma();
   const leads = await prisma.user.findMany({
     include: { answers: true },
     orderBy: { createdAt: "desc" },

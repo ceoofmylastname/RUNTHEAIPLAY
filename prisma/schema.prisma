@@ -1,31 +1,36 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  // Cloudflare D1 is SQLite-flavored. The `url` field is required by Prisma
+  // but is unused at runtime when we connect via the `@prisma/adapter-d1`
+  // adapter (which pulls the binding from the Cloudflare request context).
+  // The dummy file path here is only used by `prisma generate` and
+  // `prisma migrate diff` for local schema introspection.
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id          String              @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String              @unique
-  phone       String
-  createdAt   DateTime            @default(now())
-  answers     AssessmentAnswers?
+  id        String             @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String             @unique
+  phone     String
+  createdAt DateTime           @default(now())
+  answers   AssessmentAnswers?
 }
 
 model AssessmentAnswers {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  aiWebsites   String
-  knowledge    String
-  copywriting  String
-  dataSystems  String
-  bigPicture   String
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiWebsites  String
+  knowledge   String
+  copywriting String
+  dataSystems String
+  bigPicture  String
+  createdAt   DateTime @default(now())
 }
