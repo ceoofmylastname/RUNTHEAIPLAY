@@ -59,11 +59,18 @@ export function WebGLShader() {
         float gx = p.x;
         float bx = p.x * (1.0 - d);
 
-        float r = 0.05 / abs(p.y + sin((rx + time) * xScale) * yScale);
-        float g = 0.05 / abs(p.y + sin((gx + time) * xScale) * yScale);
-        float b = 0.05 / abs(p.y + sin((bx + time) * xScale) * yScale);
+        // Three independent wave intensities, one per chromatic-aberration offset
+        float i1 = 0.05 / abs(p.y + sin((rx + time) * xScale) * yScale);
+        float i2 = 0.05 / abs(p.y + sin((gx + time) * xScale) * yScale);
+        float i3 = 0.05 / abs(p.y + sin((bx + time) * xScale) * yScale);
 
-        gl_FragColor = vec4(r, g, b, 1.0);
+        // Brand palette: indigo #4F46E5, cyan #06B6D4, emerald #10B981
+        vec3 indigo  = vec3(0.310, 0.275, 0.898);
+        vec3 cyan    = vec3(0.024, 0.714, 0.831);
+        vec3 emerald = vec3(0.063, 0.725, 0.506);
+
+        vec3 col = i1 * indigo + i2 * cyan + i3 * emerald;
+        gl_FragColor = vec4(col, 1.0);
       }
     `;
 
