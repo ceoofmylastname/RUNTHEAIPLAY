@@ -16,7 +16,14 @@ type WelcomeEmailProps = {
   firstName?: string;
 };
 
-const VIDEOS = [
+type VideoModule = {
+  title: string;
+  eyebrow: string;
+  href: string;
+  doc?: { label: string; href: string };
+};
+
+const VIDEOS: VideoModule[] = [
   {
     title: "Automating Social Posting",
     eyebrow: "Module 01 · Distribution",
@@ -26,6 +33,10 @@ const VIDEOS = [
     title: "Setting Up Obsidian & Claude Cowork",
     eyebrow: "Module 02 · Operating System",
     href: "https://fathom.video/share/yxMNET83qBi1T_UrAA5tpA8ASVZvjogq",
+    doc: {
+      label: "Companion doc · Google Drive",
+      href: "https://docs.google.com/document/d/1EDfDOY_llyFdWqpk4IqWsEAc2B0s4VTJcNb5c5dta4Y/edit?usp=sharing",
+    },
   },
 ];
 
@@ -244,6 +255,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 eyebrow={v.eyebrow}
                 title={v.title}
                 href={v.href}
+                doc={v.doc}
               />
             ))}
           </Section>
@@ -328,37 +340,30 @@ function VideoCard({
   eyebrow,
   title,
   href,
+  doc,
 }: {
   eyebrow: string;
   title: string;
   href: string;
+  doc?: { label: string; href: string };
 }) {
   return (
-    <Link
-      href={href}
-      target="_blank"
+    <table
+      role="presentation"
+      cellPadding={0}
+      cellSpacing={0}
+      border={0}
+      width="100%"
       style={{
-        display: "block",
-        textDecoration: "none",
-        color: "inherit",
+        backgroundColor: C.card,
+        border: `1px solid ${C.border}`,
+        borderRadius: 16,
+        overflow: "hidden",
+        boxShadow:
+          "0 0 0 1px rgba(6,182,212,0.18), 0 18px 40px -20px rgba(6,182,212,0.45)",
         margin: "16px 0",
       }}
     >
-      <table
-        role="presentation"
-        cellPadding={0}
-        cellSpacing={0}
-        border={0}
-        width="100%"
-        style={{
-          backgroundColor: C.card,
-          border: `1px solid ${C.border}`,
-          borderRadius: 16,
-          overflow: "hidden",
-          boxShadow:
-            "0 0 0 1px rgba(6,182,212,0.18), 0 18px 40px -20px rgba(6,182,212,0.45)",
-        }}
-      >
         <tbody>
           {/* "Thumbnail" — gradient panel with centered play glyph */}
           <tr>
@@ -447,34 +452,74 @@ function VideoCard({
               >
                 {eyebrow}
               </Text>
-              <Text
-                style={{
-                  margin: "6px 0 0",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  letterSpacing: "-0.3px",
-                  color: C.text,
-                  lineHeight: 1.3,
-                }}
+              <Link
+                href={href}
+                target="_blank"
+                style={{ color: "inherit", textDecoration: "none" }}
               >
-                {title}
-              </Text>
-              <Text
+                <Text
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    letterSpacing: "-0.3px",
+                    color: C.text,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {title}
+                </Text>
+              </Link>
+
+              {/* Primary CTA — watch the video */}
+              <Link
+                href={href}
+                target="_blank"
                 style={{
-                  margin: "10px 0 0",
+                  display: "inline-block",
+                  marginTop: 12,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  background:
+                    "linear-gradient(90deg, rgba(6,182,212,0.18), rgba(16,185,129,0.18))",
+                  border: `1px solid ${C.borderBright}`,
                   fontSize: 13,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   letterSpacing: "0.04em",
                   color: C.cyan,
+                  textDecoration: "none",
                 }}
               >
-                Watch briefing →
-              </Text>
+                ▶  Watch briefing
+              </Link>
+
+              {/* Secondary CTA — companion doc (optional) */}
+              {doc && (
+                <Link
+                  href={doc.href}
+                  target="_blank"
+                  style={{
+                    display: "inline-block",
+                    marginTop: 12,
+                    marginLeft: 8,
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.04)",
+                    border: `1px solid ${C.border}`,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    color: C.text,
+                    textDecoration: "none",
+                  }}
+                >
+                  ⬇  {doc.label}
+                </Link>
+              )}
             </td>
           </tr>
         </tbody>
       </table>
-    </Link>
   );
 }
 
