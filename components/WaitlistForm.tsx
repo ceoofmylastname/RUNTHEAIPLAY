@@ -1,12 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import {
+  AnimatePresence,
+  motion,
+  useTime,
+  useTransform,
+  type MotionValue,
+  type Variants,
+} from "framer-motion";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import AnswerButton from "./AnswerButton";
 import PrimaryButton from "./PrimaryButton";
 import FloatingLabelInput from "./FloatingLabelInput";
 import AnimatedCheck from "./AnimatedCheck";
+import BrandOrb from "./BrandOrb";
 import { fireDualConfetti } from "@/lib/confetti";
 
 // Note: This is a data-collection form. We never reveal submission failure to
@@ -132,6 +140,34 @@ export function WaitlistForm() {
     advanceLock.current = false;
   }, [step]);
 
+  // ─────────────────────────────────────────────────────────
+  // Shared orb position + derived text color
+  // ─────────────────────────────────────────────────────────
+  // We compute the orb's position ONCE here and pass MotionValues to both
+  // the visible <BrandOrb /> and the text elements. This guarantees the
+  // text color inversion stays perfectly in sync with the orb's pixel
+  // movement — without fighting any backdrop-filter / transform stacking
+  // contexts (which would silently break mix-blend-mode in this layout).
+  const time = useTime();
+  const orbX = useTransform(time, (t) => Math.cos(t / 5200) * 320);
+  const orbY = useTransform(time, (t) => Math.sin(t / 6800) * 240);
+
+  // 0 → orb is far from form center · 1 → orb sits dead center on the form
+  const orbProximity = useTransform([orbX, orbY], (latest) => {
+    const [ox, oy] = latest as [number, number];
+    const dist = Math.hypot(ox, oy);
+    const fade = 1 - Math.min(1, dist / 360);
+    // Soften the falloff so the inversion blooms in/out smoothly
+    return fade * fade;
+  });
+
+  // White (#FFFFFF) when orb is far → near-black (#101013) when overhead.
+  // Updates every frame as a MotionValue, no React re-renders.
+  const textColor = useTransform(orbProximity, (p) => {
+    const v = Math.round(255 - p * 235);
+    return `rgb(${v}, ${v}, ${v})`;
+  });
+
   const contactValid = useMemo(() => {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return (
@@ -189,6 +225,7 @@ export function WaitlistForm() {
           setContact={setContact}
           canContinue={contactValid}
           onContinue={goNext}
+          textColor={textColor}
         />
       );
     }
@@ -203,6 +240,7 @@ export function WaitlistForm() {
           selected={answers[q.key]}
           questionNumber={qIndex + 1}
           totalQuestions={QUESTIONS.length}
+          textColor={textColor}
           onSelect={(letter) => {
             if (advanceLock.current) return;
             advanceLock.current = true;
@@ -234,43 +272,44 @@ export function WaitlistForm() {
         />
       </div>
 
-      {/* Card + ambient glow stack */}
-      <div className="relative">
-        {/* Pulsing radial cyan→emerald ambient glow */}
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute -inset-12 -z-10 rounded-[44px]"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(6,182,212,0.18) 0%, rgba(16,185,129,0.15) 45%, rgba(0,0,0,0) 75%)",
-          }}
-          animate={{
-            opacity: [0.7, 1, 0.7],
-            scale: [1, 1.04, 1],
-          }}
-          transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
-        />
-        {/* Soft secondary halo */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -inset-6 -z-10 rounded-[40px] bg-cyan-brand/10 blur-3xl"
-        />
+      {/*
+        Card stack — restructured for mix-blend-mode to work:
+          1. <BrandOrb /> (absolute, behind everything) — same stacking
+             context as the text below, so text can blend with it
+          2. Glass layer (absolute, full size of content) — owns the
+             backdrop-blur stacking context, but has NO text children
+          3. Content layer (relative) — text lives here, blends with
+             everything below it (orb + glass + page) via mix-blend-mode
 
+        The wrapper div is `relative` only (no z-index, no transform), so
+        it doesn't create a stacking context. Both the orb and the text
+        live in the parent <section>'s stacking context together.
+      */}
+      <div className="relative">
+        {/* Orbiting brand-color light — sibling of glass, NOT inside it.
+            Position MotionValues are shared with the textColor logic so
+            the inversion is always perfectly in sync with the visible orb. */}
+        <BrandOrb x={orbX} y={orbY} />
+
+        {/* Glass visual layer — absolute, sized by the content below */}
         <div
+          aria-hidden="true"
           className={[
-            "relative rounded-[32px] p-8 sm:p-10",
+            "absolute inset-0 rounded-[32px]",
             "bg-white/5 backdrop-blur-2xl",
             "border border-white/10",
             "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)]",
             "overflow-hidden",
           ].join(" ")}
         >
-          {/* Top inner highlight */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent"
-          />
+          {/* Top inner highlight line */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+        </div>
 
+        {/* Content layer — siblings of glass, NOT children. This keeps text
+            outside the backdrop-filter stacking context so mix-blend-mode
+            can reach the orb behind it. */}
+        <div className="relative p-8 sm:p-10">
           {/* Header row */}
           {!submitted && (
             <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white/40">
@@ -322,26 +361,34 @@ function ContactStep({
   setContact,
   canContinue,
   onContinue,
+  textColor,
 }: {
   contact: Contact;
   setContact: React.Dispatch<React.SetStateAction<Contact>>;
   canContinue: boolean;
   onContinue: () => void;
+  textColor: MotionValue<string>;
 }) {
   return (
     <div>
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand">
         The Hook
       </p>
-      <h1 className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-[40px]">
+      <motion.h1
+        style={{ color: textColor }}
+        className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-[40px]"
+      >
         The <span className="brand-text-gradient">AI Play</span> is loading.
         <br />
         Secure your spot.
-      </h1>
-      <p className="mt-4 text-[15px] text-white/55">
+      </motion.h1>
+      <motion.p
+        style={{ color: textColor }}
+        className="mt-4 text-[15px]"
+      >
         We're hand-selecting operators who understand the AI-native web.
         Start with the basics.
-      </p>
+      </motion.p>
 
       <form
         className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -414,12 +461,14 @@ function QuestionStep({
   selected,
   questionNumber,
   totalQuestions,
+  textColor,
   onSelect,
 }: {
   question: Question;
   selected: "A" | "B" | "C" | null;
   questionNumber: number;
   totalQuestions: number;
+  textColor: MotionValue<string>;
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
   return (
@@ -439,6 +488,7 @@ function QuestionStep({
       </motion.p>
       <motion.h2
         variants={questionItemVariants}
+        style={{ color: textColor }}
         className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl"
       >
         {question.headline}

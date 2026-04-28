@@ -67,7 +67,12 @@ export function AnswerButton({
         {letter}
       </span>
 
-      {/* Label */}
+      {/* Label
+          NOTE: We intentionally do NOT apply mix-blend-difference to this
+          label. The parent motion.button applies transform on hover/tap
+          (whileHover y:-2, whileTap scale:0.985), which creates a new
+          stacking context and would trap the blend. The black/55 backdrop
+          panel below this label already provides strong readability. */}
       <span
         className={[
           "relative text-[15px] leading-snug transition-colors duration-200 ease-in-out",
