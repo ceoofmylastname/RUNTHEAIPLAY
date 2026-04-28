@@ -19,16 +19,39 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const ADVANCE_DELAY_MS = 300;
 
 // ─────────────────────────────────────────────────────────
-// Animated gradient typography styles
+// RotatingHeadline — bright white text that periodically pulses
+// through a moving indigo→cyan→emerald gradient and back to white.
 // ─────────────────────────────────────────────────────────
-// Pure white text with mix-blend-mode washed out when the orb passed behind
-// it. Replaced with a continuously-animating multi-color gradient + tight
-// dark drop-shadow. The gradient is bg-clipped to the text and animates
-// `background-position` 0% → 100% → 0% via the `gradient` keyframe defined
-// in tailwind.config.ts. The drop-shadow keeps every glyph crisp regardless
-// of what brand color is animating behind it.
-const GRADIENT_TEXT_BASE =
-  "bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]";
+// Implementation: two stacked text layers inside a `relative` wrapper.
+// Layer 1 is the always-visible white text (with a tight dark drop-shadow
+// for readability over the moving orb). Layer 2 is the same text rendered
+// as a bg-clipped gradient with the `gradient-pulse` animation, which
+// fades opacity 0 → 1 → 0 while sweeping background-position. When the
+// overlay is at opacity 0 the white text underneath shows through; at
+// opacity 1 the multi-color moving gradient takes over.
+function RotatingHeadline({
+  as: Tag = "h1",
+  children,
+  className = "",
+}: {
+  as?: "h1" | "h2";
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Tag className={`relative ${className}`}>
+      <span className="relative text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+        {children}
+      </span>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 animate-gradient-pulse bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-[length:200%_auto] bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
+      >
+        {children}
+      </span>
+    </Tag>
+  );
+}
 
 type Contact = {
   firstName: string;
@@ -361,13 +384,14 @@ function ContactStep({
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         The Hook
       </p>
-      <h1
-        className={`mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-tight sm:text-[40px] ${GRADIENT_TEXT_BASE}`}
+      <RotatingHeadline
+        as="h1"
+        className="mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-tight sm:text-[40px]"
       >
         The AI Play is loading.
         <br />
         Secure your spot.
-      </h1>
+      </RotatingHeadline>
       <p className="mt-4 text-[15px] font-medium text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
         We're hand-selecting operators who understand the AI-native web.
         Start with the basics.
@@ -466,12 +490,14 @@ function QuestionStep({
           Question {questionNumber} / {totalQuestions}
         </span>
       </motion.p>
-      <motion.h2
-        variants={questionItemVariants}
-        className={`mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl ${GRADIENT_TEXT_BASE}`}
-      >
-        {question.headline}
-      </motion.h2>
+      <motion.div variants={questionItemVariants}>
+        <RotatingHeadline
+          as="h2"
+          className="mt-3 font-display text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl"
+        >
+          {question.headline}
+        </RotatingHeadline>
+      </motion.div>
 
       <div className="mt-8 space-y-3">
         {question.options.map((opt) => (
@@ -528,14 +554,18 @@ function CompletionStep({
       className="flex min-h-[400px] flex-col items-center justify-center text-center"
     >
       <AnimatedCheck size={104} />
-      <motion.h2
+      <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-        className={`mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl ${GRADIENT_TEXT_BASE}`}
       >
-        Welcome to the Run The AI Play community.
-      </motion.h2>
+        <RotatingHeadline
+          as="h2"
+          className="mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
+        >
+          Welcome to the Run The AI Play community.
+        </RotatingHeadline>
+      </motion.div>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}

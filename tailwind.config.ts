@@ -51,11 +51,22 @@ const config: Config = {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
+        // Used by the gradient overlay layered over a white headline.
+        // Fades the multi-color gradient in (revealing colored text) and
+        // back out (revealing the white text underneath), while also
+        // sweeping the background-position so the colors themselves move
+        // when visible. White → moving gradient → white, on a loop.
+        gradientPulse: {
+          "0%": { opacity: "0", backgroundPosition: "0% 50%" },
+          "50%": { opacity: "1", backgroundPosition: "100% 50%" },
+          "100%": { opacity: "0", backgroundPosition: "200% 50%" },
+        },
       },
       animation: {
         "pulse-glow": "pulseGlow 6s ease-in-out infinite",
         "border-shimmer": "borderShimmer 4s ease-in-out infinite",
         gradient: "gradient 6s ease-in-out infinite",
+        "gradient-pulse": "gradientPulse 6s ease-in-out infinite",
       },
     },
   },
