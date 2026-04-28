@@ -14,9 +14,7 @@ import { fireDualConfetti } from "@/lib/confetti";
 // the user — we always advance to the success state and fire confetti. Any
 // network/API errors are logged to the console and silently ignored.
 
-// Snappy spring used everywhere a step transitions
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
-// Eased curve for non-spring micro-animations (text reveals, etc.)
 const EASE = [0.22, 1, 0.36, 1] as const;
 const ADVANCE_DELAY_MS = 300;
 
@@ -105,6 +103,20 @@ const stepVariants: Variants = {
   exit: { x: -50, scale: 0.95, opacity: 0 },
 };
 
+// ─────────────────────────────────────────────────────────
+// Layer modes
+// ─────────────────────────────────────────────────────────
+// We render each step TWICE — once in the Form Layer (interactive
+// widgets, NO blend) and once in the Text Overlay (typography only,
+// mix-blend-difference). The mode prop controls which parts are visible
+// vs invisible-but-space-reserving in each layer, so layouts align.
+type StepMode = "form" | "text";
+
+const HIDE_STYLE = {
+  visibility: "hidden" as const,
+  pointerEvents: "none" as const,
+};
+
 export function WaitlistForm() {
   const [step, setStep] = useState(0);
   const [contact, setContact] = useState<Contact>({
@@ -122,8 +134,6 @@ export function WaitlistForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Lock to prevent the auto-advance from double-firing if the user
-  // mashes options during the 300ms registration window.
   const advanceLock = useRef(false);
   useEffect(() => {
     advanceLock.current = false;
@@ -164,8 +174,6 @@ export function WaitlistForm() {
     setStep(TOTAL_STEPS - 1);
   };
 
-  // Submit once we land on the completion step. useEffect runs after render,
-  // so `answers` always reflects the user's last selection.
   useEffect(() => {
     if (step === TOTAL_STEPS - 1 && !submitted && !submitting) {
       void handleSubmit();
@@ -173,15 +181,15 @@ export function WaitlistForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  // Confetti on success
   useEffect(() => {
     if (submitted) fireDualConfetti();
   }, [submitted]);
 
-  const stepContent = (() => {
+  const renderStep = (mode: StepMode) => {
     if (step === 0) {
       return (
         <ContactStep
+          mode={mode}
           contact={contact}
           setContact={setContact}
           canContinue={contactValid}
@@ -196,6 +204,7 @@ export function WaitlistForm() {
       const isLastQuestion = qIndex === QUESTIONS.length - 1;
       return (
         <QuestionStep
+          mode={mode}
           question={q}
           selected={answers[q.key]}
           questionNumber={qIndex + 1}
@@ -216,8 +225,14 @@ export function WaitlistForm() {
       );
     }
 
-    return <CompletionStep submitting={submitting} submitted={submitted} />;
-  })();
+    return (
+      <CompletionStep
+        mode={mode}
+        submitting={submitting}
+        submitted={submitted}
+      />
+    );
+  };
 
   return (
     <div className="relative w-full max-w-[640px]">
@@ -232,45 +247,44 @@ export function WaitlistForm() {
       </div>
 
       {/*
-        SIBLING ARCHITECTURE for mix-blend-exclusion
-        ────────────────────────────────────────────
-        The text and the glass card are SIBLINGS, not parent/child. This is
-        what makes the blend mode work: the content layer's mix-blend-mode
-        composites against the wrapper's stacking context backdrop, which
-        contains the orb and the (empty) glass — exactly what we need to
-        invert pure-white text wherever the bright light passes behind.
-
-        The wrapper uses `isolate` (CSS isolation: isolate) to scope the
-        z-index ordering of orb / glass / content locally without polluting
-        the outer page's stacking context.
+        TWO-LAYER ARCHITECTURE (preserves spring slide + clean inputs)
+        ──────────────────────────────────────────────────────────────
+        Layer 1 — BrandOrb (absolute, base): the moving brand-color light
+        Layer 2 — Glass (absolute z-0, EMPTY, pointer-events-none):
+                  backdrop-blur card. No children so its stacking context
+                  doesn't trap any text.
+        Layer 3 — Form Layer (relative z-10): all interactive widgets
+                  (header, inputs, primary button, answer buttons). NO
+                  blend mode, so inputs stay perfectly readable.
+        Layer 4 — Text Overlay (absolute z-20, pointer-events-none,
+                  mix-blend-difference): typography only. Sibling of
+                  Form Layer, so its blend mode pierces directly to the
+                  orb beneath via the wrapper's stacking context.
+        Both layers run synchronized AnimatePresence with the same
+        stepVariants → visually a single slide animation.
       */}
       <div className="relative isolate">
         {/* (1) Base layer — moving brand-color light */}
         <BrandOrb />
 
-        {/* (2) Middle layer — empty glass card. ONLY visual, no children.
-            pointer-events-none so clicks fall through to the content layer. */}
+        {/* (2) Middle layer — empty glass card */}
         <div
           aria-hidden="true"
-          className="absolute inset-0 z-0 rounded-[32px] border border-white/10 bg-white/5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)] backdrop-blur-2xl pointer-events-none"
+          className="pointer-events-none absolute inset-0 z-0 rounded-[32px] border border-white/10 bg-white/5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)] backdrop-blur-2xl"
         />
 
-        {/* (3) Top layer — all text. mix-blend-exclusion + pure white text
-            so the inversion is the exact mathematical complement of the
-            brand-color light passing behind. */}
-        <div className="relative z-10 p-8 text-white mix-blend-exclusion sm:p-10">
-          {/* Header row */}
+        {/* (3) Form Layer — interactive, no blend */}
+        <div className="relative z-10 p-8 sm:p-10">
           {!submitted && (
-            <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white">
+            <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white/55">
               <span>
                 Step {Math.min(step + 1, TOTAL_STEPS)}{" "}
-                <span style={{ opacity: 0.5 }}>/ {TOTAL_STEPS}</span>
+                <span className="text-white/30">/ {TOTAL_STEPS}</span>
               </span>
               {step > 0 && step < TOTAL_STEPS - 1 && (
                 <button
                   onClick={goBack}
-                  className="inline-flex items-center gap-1.5 text-white transition-opacity hover:opacity-100"
-                  style={{ opacity: 0.85 }}
+                  className="inline-flex items-center gap-1.5 text-white/65 transition-colors hover:text-white"
                 >
                   <ArrowLeft size={14} />
                   Back
@@ -289,14 +303,43 @@ export function WaitlistForm() {
                 exit="exit"
                 transition={SPRING}
               >
-                {stepContent}
+                {renderStep("form")}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* (4) Text Overlay — typography only, mix-blend-difference */}
+        <div className="pointer-events-none absolute inset-0 z-20 p-8 sm:p-10 mix-blend-difference">
+          {/* Invisible header placeholder so layout matches Form Layer exactly */}
+          {!submitted && (
+            <div
+              aria-hidden="true"
+              style={HIDE_STYLE}
+              className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em]"
+            >
+              <span>Step 0 / {TOTAL_STEPS}</span>
+            </div>
+          )}
+
+          <div className="relative min-h-[440px]">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={step}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={SPRING}
+              >
+                {renderStep("text")}
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
       </div>
 
-      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-white/40">
+      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-white/45">
         <ShieldCheck size={14} />
         Encrypted intake. Your data is never sold.
       </p>
@@ -306,33 +349,51 @@ export function WaitlistForm() {
 
 /* ───────────────────────── Step components ───────────────────────── */
 
+type StepProps = { mode: StepMode };
+
+const visIf = (visible: boolean) => (visible ? undefined : HIDE_STYLE);
+
 function ContactStep({
+  mode,
   contact,
   setContact,
   canContinue,
   onContinue,
-}: {
+}: StepProps & {
   contact: Contact;
   setContact: React.Dispatch<React.SetStateAction<Contact>>;
   canContinue: boolean;
   onContinue: () => void;
 }) {
+  const text = mode === "text";
+  const form = mode === "form";
+
   return (
     <div>
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white">
+      <p
+        style={visIf(text)}
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white"
+      >
         The Hook
       </p>
-      <h1 className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight text-white sm:text-[40px]">
+      <h1
+        style={visIf(text)}
+        className="mt-3 font-display text-3xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-[40px]"
+      >
         The AI Play is loading.
         <br />
         Secure your spot.
       </h1>
-      <p className="mt-4 text-[15px] text-white">
+      <p
+        style={visIf(text)}
+        className="mt-4 text-[15px] font-medium text-white"
+      >
         We're hand-selecting operators who understand the AI-native web.
         Start with the basics.
       </p>
 
       <form
+        style={visIf(form)}
         className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
@@ -344,7 +405,7 @@ function ContactStep({
           value={contact.firstName}
           onChange={(v) => setContact((c) => ({ ...c, firstName: v }))}
           autoComplete="given-name"
-          autoFocus
+          autoFocus={form}
         />
         <FloatingLabelInput
           label="Last name"
@@ -379,7 +440,6 @@ function ContactStep({
   );
 }
 
-// Stagger orchestration for the question step
 const questionContainerVariants: Variants = {
   initial: {},
   enter: {
@@ -399,18 +459,22 @@ const questionItemVariants: Variants = {
 };
 
 function QuestionStep({
+  mode,
   question,
   selected,
   questionNumber,
   totalQuestions,
   onSelect,
-}: {
+}: StepProps & {
   question: Question;
   selected: "A" | "B" | "C" | null;
   questionNumber: number;
   totalQuestions: number;
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
+  const text = mode === "text";
+  const form = mode === "form";
+
   return (
     <motion.div
       variants={questionContainerVariants}
@@ -419,21 +483,23 @@ function QuestionStep({
     >
       <motion.p
         variants={questionItemVariants}
+        style={visIf(text)}
         className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white"
       >
         {question.subhead} ·{" "}
-        <span style={{ opacity: 0.55 }}>
+        <span style={{ opacity: 0.6 }}>
           Question {questionNumber} / {totalQuestions}
         </span>
       </motion.p>
       <motion.h2
         variants={questionItemVariants}
+        style={visIf(text)}
         className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl"
       >
         {question.headline}
       </motion.h2>
 
-      <div className="mt-8 space-y-3">
+      <div style={visIf(form)} className="mt-8 space-y-3">
         {question.options.map((opt) => (
           <motion.div key={opt.letter} variants={questionItemVariants}>
             <AnswerButton
@@ -448,8 +514,8 @@ function QuestionStep({
 
       <motion.p
         variants={questionItemVariants}
-        className="mt-6 text-xs text-white"
-        style={{ opacity: 0.55 }}
+        style={{ ...visIf(text), opacity: 0.6 }}
+        className="mt-6 text-xs font-medium text-white"
       >
         Tap any answer — we'll auto-advance.
       </motion.p>
@@ -458,15 +524,22 @@ function QuestionStep({
 }
 
 function CompletionStep({
+  mode,
   submitting,
   submitted,
-}: {
+}: StepProps & {
   submitting: boolean;
   submitted: boolean;
 }) {
+  const text = mode === "text";
+  const form = mode === "form";
+
   if (submitting || !submitted) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
+      <div
+        style={visIf(form)}
+        className="flex min-h-[400px] flex-col items-center justify-center text-center"
+      >
         <div className="relative">
           <div className="absolute inset-0 -z-10 animate-pulse-glow rounded-full bg-cyan-brand/30 blur-2xl" />
           <Loader2 className="h-14 w-14 animate-spin text-cyan-brand" />
@@ -474,7 +547,7 @@ function CompletionStep({
         <h2 className="mt-8 font-display text-2xl font-bold text-white">
           Securing your spot…
         </h2>
-        <p className="mt-2 text-sm text-white" style={{ opacity: 0.6 }}>
+        <p className="mt-2 text-sm text-white/60">
           Encrypting payload · Writing to ledger · Provisioning access
         </p>
       </div>
@@ -488,12 +561,17 @@ function CompletionStep({
       transition={{ duration: 0.6, ease: EASE }}
       className="flex min-h-[400px] flex-col items-center justify-center text-center"
     >
-      <AnimatedCheck size={104} />
+      {/* Animated checkmark — visual element, lives in form layer (no blend) */}
+      <div style={visIf(form)}>
+        <AnimatedCheck size={104} />
+      </div>
+
       <motion.h2
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-        className="mt-8 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl"
+        style={visIf(text)}
+        className="mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-4xl"
       >
         Welcome to the Run The AI Play community.
       </motion.h2>
@@ -501,7 +579,8 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.85, ease: EASE }}
-        className="mt-5 max-w-md text-[15px] leading-relaxed text-white"
+        style={visIf(text)}
+        className="mt-5 max-w-md text-[15px] font-medium leading-relaxed text-white"
       >
         Your invite to join the community lands in your inbox within the
         next few days.
@@ -510,8 +589,8 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 1.05, ease: EASE }}
-        className="mt-3 max-w-md text-sm leading-relaxed text-white"
-        style={{ opacity: 0.6 }}
+        style={{ ...visIf(text), opacity: 0.65 }}
+        className="mt-3 max-w-md text-sm font-medium leading-relaxed text-white"
       >
         Until then, watch your inbox — we're sending the replay of our most
         recent training. Once the community is live, every replay will live
