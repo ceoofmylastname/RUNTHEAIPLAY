@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getRequestContext } from "@cloudflare/next-on-pages";
 import { getPrisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/email";
 
@@ -127,10 +128,27 @@ export async function POST(req: Request) {
     console.log("[waitlist] ✓ DB upsert succeeded:", { userId: user.id });
 
     if (isNew) {
-      // Fire-and-forget: never block the form response on email send.
-      // sendWelcomeEmail handles its own errors and never throws.
-      console.log("[waitlist] new user — triggering welcome email send…");
-      void sendWelcomeEmail({ to: email, firstName });
+      // CRITICAL: on Cloudflare's edge runtime, a bare `void` fire-and-forget
+      // promise gets killed the moment the response is returned — the
+      // isolate terminates before Resend's HTTP call can finish, so the
+      // email silently never goes out. The fix is `ctx.waitUntil()`, which
+      // tells Cloudflare to keep the isolate alive until the passed promise
+      // resolves. The HTTP response still returns immediately to the user
+      // (form shows confetti instantly); only the background work is
+      // extended.
+      try {
+        const { ctx } = getRequestContext();
+        ctx.waitUntil(sendWelcomeEmail({ to: email, firstName }));
+        console.log("[waitlist] new user — email queued via ctx.waitUntil");
+      } catch (waitErr) {
+        // Fallback for environments where getRequestContext is unavailable
+        // (shouldn't happen on Pages but useful in tests / odd setups).
+        console.warn(
+          "[waitlist] ctx.waitUntil unavailable, falling back to void:",
+          waitErr
+        );
+        void sendWelcomeEmail({ to: email, firstName });
+      }
     } else {
       console.log("[waitlist] existing user — skipping welcome email");
     }
