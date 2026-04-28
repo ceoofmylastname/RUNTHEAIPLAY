@@ -1,27 +1,26 @@
 "use client";
 
-import { motion, type MotionValue } from "framer-motion";
+import { motion, useTime, useTransform } from "framer-motion";
 
 const ORB_SIZE = 720;
 
-type BrandOrbProps = {
-  /**
-   * X offset from the parent's center (in pixels). Driven by the same
-   * MotionValue that the WaitlistForm uses to compute textColor, so the
-   * visual orb and the text inversion stay perfectly in sync.
-   */
-  x: MotionValue<number>;
-  /** Y offset from the parent's center (in pixels). */
-  y: MotionValue<number>;
-};
-
 /**
- * Visible brand-color orb. Position is owned by the parent so it can be
- * shared with text-color logic. The parent passes raw offsets (cos/sin
- * of time) and we add our own translate(-50%, -50%) via the negative
- * half-size offsets baked into the transform.
+ * Slowly orbits a large, heavily-blurred radial gradient (cyan → emerald)
+ * around the form. Self-contained: computes its own position via useTime +
+ * useTransform so MotionValues update every frame without re-rendering React.
+ *
+ * MUST be placed as a SIBLING of the form's content layer (not inside the
+ * backdrop-blur glass card) so that mix-blend-exclusion on the content can
+ * reach it through the wrapper's stacking context.
  */
-export function BrandOrb({ x, y }: BrandOrbProps) {
+export function BrandOrb() {
+  const time = useTime();
+
+  // Lissajous orbit: different X/Y periods give a slow, organic figure-eight
+  // sweep instead of a perfect circle. Centered on the form (the parent).
+  const x = useTransform(time, (t) => Math.cos(t / 5200) * 320);
+  const y = useTransform(time, (t) => Math.sin(t / 6800) * 240);
+
   return (
     <motion.div
       aria-hidden="true"
@@ -30,8 +29,6 @@ export function BrandOrb({ x, y }: BrandOrbProps) {
         y,
         width: ORB_SIZE,
         height: ORB_SIZE,
-        // Center the orb on the parent's middle: top-left starts at (50%, 50%)
-        // then we shift back by half the orb size, plus the (x,y) MotionValue.
         marginLeft: -ORB_SIZE / 2,
         marginTop: -ORB_SIZE / 2,
       }}
@@ -41,7 +38,7 @@ export function BrandOrb({ x, y }: BrandOrbProps) {
         className="h-full w-full rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(6,182,212,0.92) 0%, rgba(16,185,129,0.55) 32%, rgba(6,182,212,0.18) 55%, transparent 72%)",
+            "radial-gradient(circle, rgba(6,182,212,0.95) 0%, rgba(16,185,129,0.6) 32%, rgba(6,182,212,0.2) 55%, transparent 72%)",
         }}
       />
     </motion.div>

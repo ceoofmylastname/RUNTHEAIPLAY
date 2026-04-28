@@ -1,26 +1,18 @@
 "use client";
 
-import { motion, type MotionValue } from "framer-motion";
+import { motion } from "framer-motion";
 
 type AnswerButtonProps = {
   letter: "A" | "B" | "C";
   label: string;
   selected?: boolean;
   onClick: () => void;
-  /**
-   * Driven by WaitlistForm's orb position. When the orb passes overhead, the
-   * unselected label color smoothly inverts toward black, then back to white.
-   * When `selected` is true we drop the MotionValue and use a solid white so
-   * the label stays vivid over the cyan/emerald gradient background.
-   */
-  textColor?: MotionValue<string>;
 };
 
 export function AnswerButton({
   letter,
   label,
   selected = false,
-  textColor,
   onClick,
 }: AnswerButtonProps) {
   return (
@@ -65,26 +57,17 @@ export function AnswerButton({
           "text-sm font-bold transition-all duration-200 ease-in-out",
           selected
             ? "bg-[linear-gradient(135deg,#06B6D4,#10B981)] text-white shadow-[0_0_18px_rgba(6,182,212,0.55)]"
-            : "bg-white/[0.05] text-white/70 group-hover:text-white",
+            : "bg-white/[0.05] text-white group-hover:text-white",
         ].join(" ")}
       >
         {letter}
       </span>
 
-      {/* Label
-          Unselected: color is the orb-driven MotionValue (white → black as
-          the orb passes overhead). Selected: drop the MotionValue and use
-          solid white — over the cyan/emerald selected background, the white
-          stays vivid and the spec-required glow isn't washed out. */}
-      <motion.span
-        style={selected || !textColor ? undefined : { color: textColor }}
-        className={[
-          "relative text-[15px] leading-snug transition-colors duration-200 ease-in-out",
-          selected ? "text-white" : "",
-        ].join(" ")}
-      >
+      {/* Label — pure white so the parent content layer's mix-blend-exclusion
+          calculates the exact mathematical inverse over the orb's brightness. */}
+      <span className="relative text-[15px] leading-snug text-white">
         {label}
-      </motion.span>
+      </span>
 
       {/* Right-edge radio indicator */}
       <span

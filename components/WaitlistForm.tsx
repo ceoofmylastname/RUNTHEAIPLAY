@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useTime,
-  useTransform,
-  type MotionValue,
-  type Variants,
-} from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import AnswerButton from "./AnswerButton";
 import PrimaryButton from "./PrimaryButton";
@@ -106,10 +99,6 @@ const QUESTIONS: Question[] = [
 
 const TOTAL_STEPS = 1 + QUESTIONS.length + 1;
 
-// Step-level variants:
-// - exit: scale 0.95, opacity 0, slide left -50
-// - enter: from x: 50 + scale 0.95 + opacity 0
-// - center: x:0, scale 1, opacity 1
 const stepVariants: Variants = {
   enter: { x: 50, scale: 0.95, opacity: 0 },
   center: { x: 0, scale: 1, opacity: 1 },
@@ -139,46 +128,6 @@ export function WaitlistForm() {
   useEffect(() => {
     advanceLock.current = false;
   }, [step]);
-
-  // ─────────────────────────────────────────────────────────
-  // Shared orb position + derived text color
-  // ─────────────────────────────────────────────────────────
-  // We compute the orb's position ONCE here and pass MotionValues to both
-  // the visible <BrandOrb /> and the text elements. This guarantees the
-  // text color inversion stays perfectly in sync with the orb's pixel
-  // movement — without fighting any backdrop-filter / transform stacking
-  // contexts (which would silently break mix-blend-mode in this layout).
-  const time = useTime();
-  const orbX = useTransform(time, (t) => Math.cos(t / 5200) * 320);
-  const orbY = useTransform(time, (t) => Math.sin(t / 6800) * 240);
-
-  // 0 → orb is far from form center · 1 → orb sits dead center on the form.
-  // Tightened to 200px so the inversion only fires when the orb is genuinely
-  // overhead (instead of any time it drifts into the same quadrant).
-  const orbProximity = useTransform([orbX, orbY], (latest) => {
-    const [ox, oy] = latest as [number, number];
-    const dist = Math.hypot(ox, oy);
-    const fade = 1 - Math.min(1, dist / 200);
-    // Cubic falloff = even softer bloom + sharper centered moment
-    return fade * fade * fade;
-  });
-
-  // White (#FFFFFF) → pure black (#000000) for body copy. Aggressive: text
-  // bottoms out at full black when the orb is dead overhead.
-  const textColor = useTransform(orbProximity, (p) => {
-    const v = Math.round(255 * (1 - p));
-    return `rgb(${v}, ${v}, ${v})`;
-  });
-
-  // Brand cyan (#06B6D4) → near-black (#0B0B0C) for the eyebrow tags.
-  // Keeps the cyan brand identity at rest, but darkens to disappear into
-  // the orb's brightness when the light is overhead.
-  const eyebrowColor = useTransform(orbProximity, (p) => {
-    const r = Math.round(6 + (11 - 6) * p);
-    const g = Math.round(182 + (11 - 182) * p);
-    const b = Math.round(212 + (12 - 212) * p);
-    return `rgb(${r}, ${g}, ${b})`;
-  });
 
   const contactValid = useMemo(() => {
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -237,8 +186,6 @@ export function WaitlistForm() {
           setContact={setContact}
           canContinue={contactValid}
           onContinue={goNext}
-          textColor={textColor}
-          eyebrowColor={eyebrowColor}
         />
       );
     }
@@ -253,8 +200,6 @@ export function WaitlistForm() {
           selected={answers[q.key]}
           questionNumber={qIndex + 1}
           totalQuestions={QUESTIONS.length}
-          textColor={textColor}
-          eyebrowColor={eyebrowColor}
           onSelect={(letter) => {
             if (advanceLock.current) return;
             advanceLock.current = true;
@@ -287,64 +232,51 @@ export function WaitlistForm() {
       </div>
 
       {/*
-        Card stack — restructured for mix-blend-mode to work:
-          1. <BrandOrb /> (absolute, behind everything) — same stacking
-             context as the text below, so text can blend with it
-          2. Glass layer (absolute, full size of content) — owns the
-             backdrop-blur stacking context, but has NO text children
-          3. Content layer (relative) — text lives here, blends with
-             everything below it (orb + glass + page) via mix-blend-mode
+        SIBLING ARCHITECTURE for mix-blend-exclusion
+        ────────────────────────────────────────────
+        The text and the glass card are SIBLINGS, not parent/child. This is
+        what makes the blend mode work: the content layer's mix-blend-mode
+        composites against the wrapper's stacking context backdrop, which
+        contains the orb and the (empty) glass — exactly what we need to
+        invert pure-white text wherever the bright light passes behind.
 
-        The wrapper div is `relative` only (no z-index, no transform), so
-        it doesn't create a stacking context. Both the orb and the text
-        live in the parent <section>'s stacking context together.
+        The wrapper uses `isolate` (CSS isolation: isolate) to scope the
+        z-index ordering of orb / glass / content locally without polluting
+        the outer page's stacking context.
       */}
-      <div className="relative">
-        {/* Orbiting brand-color light — sibling of glass, NOT inside it.
-            Position MotionValues are shared with the textColor logic so
-            the inversion is always perfectly in sync with the visible orb. */}
-        <BrandOrb x={orbX} y={orbY} />
+      <div className="relative isolate">
+        {/* (1) Base layer — moving brand-color light */}
+        <BrandOrb />
 
-        {/* Glass visual layer — absolute, sized by the content below */}
+        {/* (2) Middle layer — empty glass card. ONLY visual, no children.
+            pointer-events-none so clicks fall through to the content layer. */}
         <div
           aria-hidden="true"
-          className={[
-            "absolute inset-0 rounded-[32px]",
-            "bg-white/5 backdrop-blur-2xl",
-            "border border-white/10",
-            "shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)]",
-            "overflow-hidden",
-          ].join(" ")}
-        >
-          {/* Top inner highlight line */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-        </div>
+          className="absolute inset-0 z-0 rounded-[32px] border border-white/10 bg-white/5 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85),0_0_60px_-30px_rgba(6,182,212,0.5)] backdrop-blur-2xl pointer-events-none"
+        />
 
-        {/* Content layer — siblings of glass, NOT children. This keeps text
-            outside the backdrop-filter stacking context so mix-blend-mode
-            can reach the orb behind it. */}
-        <div className="relative p-8 sm:p-10">
+        {/* (3) Top layer — all text. mix-blend-exclusion + pure white text
+            so the inversion is the exact mathematical complement of the
+            brand-color light passing behind. */}
+        <div className="relative z-10 p-8 text-white mix-blend-exclusion sm:p-10">
           {/* Header row */}
           {!submitted && (
-            <motion.div
-              style={{ color: textColor, opacity: 0.55 }}
-              className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em]"
-            >
+            <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white">
               <span>
                 Step {Math.min(step + 1, TOTAL_STEPS)}{" "}
-                <span style={{ opacity: 0.55 }}>/ {TOTAL_STEPS}</span>
+                <span style={{ opacity: 0.5 }}>/ {TOTAL_STEPS}</span>
               </span>
               {step > 0 && step < TOTAL_STEPS - 1 && (
                 <button
                   onClick={goBack}
-                  className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-100"
+                  className="inline-flex items-center gap-1.5 text-white transition-opacity hover:opacity-100"
                   style={{ opacity: 0.85 }}
                 >
                   <ArrowLeft size={14} />
                   Back
                 </button>
               )}
-            </motion.div>
+            </div>
           )}
 
           <div className="relative min-h-[440px]">
@@ -364,13 +296,10 @@ export function WaitlistForm() {
         </div>
       </div>
 
-      <motion.p
-        style={{ color: textColor, opacity: 0.55 }}
-        className="mt-6 flex items-center justify-center gap-2 text-xs"
-      >
+      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-white/40">
         <ShieldCheck size={14} />
         Encrypted intake. Your data is never sold.
-      </motion.p>
+      </p>
     </div>
   );
 }
@@ -382,39 +311,26 @@ function ContactStep({
   setContact,
   canContinue,
   onContinue,
-  textColor,
-  eyebrowColor,
 }: {
   contact: Contact;
   setContact: React.Dispatch<React.SetStateAction<Contact>>;
   canContinue: boolean;
   onContinue: () => void;
-  textColor: MotionValue<string>;
-  eyebrowColor: MotionValue<string>;
 }) {
   return (
     <div>
-      <motion.p
-        style={{ color: eyebrowColor }}
-        className="text-[10.5px] font-semibold uppercase tracking-[0.24em]"
-      >
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white">
         The Hook
-      </motion.p>
-      <motion.h1
-        style={{ color: textColor }}
-        className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-[40px]"
-      >
-        The <span className="brand-text-gradient">AI Play</span> is loading.
+      </p>
+      <h1 className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight text-white sm:text-[40px]">
+        The AI Play is loading.
         <br />
         Secure your spot.
-      </motion.h1>
-      <motion.p
-        style={{ color: textColor }}
-        className="mt-4 text-[15px]"
-      >
+      </h1>
+      <p className="mt-4 text-[15px] text-white">
         We're hand-selecting operators who understand the AI-native web.
         Start with the basics.
-      </motion.p>
+      </p>
 
       <form
         className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2"
@@ -487,16 +403,12 @@ function QuestionStep({
   selected,
   questionNumber,
   totalQuestions,
-  textColor,
-  eyebrowColor,
   onSelect,
 }: {
   question: Question;
   selected: "A" | "B" | "C" | null;
   questionNumber: number;
   totalQuestions: number;
-  textColor: MotionValue<string>;
-  eyebrowColor: MotionValue<string>;
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
   return (
@@ -507,18 +419,16 @@ function QuestionStep({
     >
       <motion.p
         variants={questionItemVariants}
-        style={{ color: eyebrowColor }}
-        className="text-[10.5px] font-semibold uppercase tracking-[0.24em]"
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-white"
       >
         {question.subhead} ·{" "}
-        <span className="text-white/40">
+        <span style={{ opacity: 0.55 }}>
           Question {questionNumber} / {totalQuestions}
         </span>
       </motion.p>
       <motion.h2
         variants={questionItemVariants}
-        style={{ color: textColor }}
-        className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight sm:text-3xl"
+        className="mt-3 font-display text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl"
       >
         {question.headline}
       </motion.h2>
@@ -530,7 +440,6 @@ function QuestionStep({
               letter={opt.letter}
               label={opt.label}
               selected={selected === opt.letter}
-              textColor={textColor}
               onClick={() => onSelect(opt.letter)}
             />
           </motion.div>
@@ -539,8 +448,8 @@ function QuestionStep({
 
       <motion.p
         variants={questionItemVariants}
-        style={{ color: textColor, opacity: 0.55 }}
-        className="mt-6 text-xs"
+        className="mt-6 text-xs text-white"
+        style={{ opacity: 0.55 }}
       >
         Tap any answer — we'll auto-advance.
       </motion.p>
@@ -562,10 +471,10 @@ function CompletionStep({
           <div className="absolute inset-0 -z-10 animate-pulse-glow rounded-full bg-cyan-brand/30 blur-2xl" />
           <Loader2 className="h-14 w-14 animate-spin text-cyan-brand" />
         </div>
-        <h2 className="mt-8 font-display text-2xl font-bold">
+        <h2 className="mt-8 font-display text-2xl font-bold text-white">
           Securing your spot…
         </h2>
-        <p className="mt-2 text-sm text-white/55">
+        <p className="mt-2 text-sm text-white" style={{ opacity: 0.6 }}>
           Encrypting payload · Writing to ledger · Provisioning access
         </p>
       </div>
@@ -584,17 +493,15 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
-        className="mt-8 font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl"
+        className="mt-8 font-display text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl"
       >
-        Welcome to the{" "}
-        <span className="brand-text-gradient">Run The AI Play</span>{" "}
-        community.
+        Welcome to the Run The AI Play community.
       </motion.h2>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.85, ease: EASE }}
-        className="mt-5 max-w-md text-[15px] leading-relaxed text-white/75"
+        className="mt-5 max-w-md text-[15px] leading-relaxed text-white"
       >
         Your invite to join the community lands in your inbox within the
         next few days.
@@ -603,7 +510,8 @@ function CompletionStep({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 1.05, ease: EASE }}
-        className="mt-3 max-w-md text-sm leading-relaxed text-white/50"
+        className="mt-3 max-w-md text-sm leading-relaxed text-white"
+        style={{ opacity: 0.6 }}
       >
         Until then, watch your inbox — we're sending the replay of our most
         recent training. Once the community is live, every replay will live
