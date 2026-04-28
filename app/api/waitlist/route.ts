@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -53,6 +54,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Pre-check existence so we only send the welcome email on the user's
+    // FIRST submission (re-submissions update their record but don't re-spam).
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    const isNew = !existing;
+
     const user = await prisma.user.upsert({
       where: { email },
       create: {
@@ -92,6 +101,12 @@ export async function POST(req: Request) {
       },
       include: { answers: true },
     });
+
+    if (isNew) {
+      // Fire-and-forget: never block the form response on email send.
+      // sendWelcomeEmail handles its own errors and never throws.
+      void sendWelcomeEmail({ to: email, firstName });
+    }
 
     return NextResponse.json({ ok: true, id: user.id });
   } catch (err) {
