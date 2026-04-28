@@ -152,20 +152,32 @@ export function WaitlistForm() {
   const orbX = useTransform(time, (t) => Math.cos(t / 5200) * 320);
   const orbY = useTransform(time, (t) => Math.sin(t / 6800) * 240);
 
-  // 0 → orb is far from form center · 1 → orb sits dead center on the form
+  // 0 → orb is far from form center · 1 → orb sits dead center on the form.
+  // Tightened to 200px so the inversion only fires when the orb is genuinely
+  // overhead (instead of any time it drifts into the same quadrant).
   const orbProximity = useTransform([orbX, orbY], (latest) => {
     const [ox, oy] = latest as [number, number];
     const dist = Math.hypot(ox, oy);
-    const fade = 1 - Math.min(1, dist / 360);
-    // Soften the falloff so the inversion blooms in/out smoothly
-    return fade * fade;
+    const fade = 1 - Math.min(1, dist / 200);
+    // Cubic falloff = even softer bloom + sharper centered moment
+    return fade * fade * fade;
   });
 
-  // White (#FFFFFF) when orb is far → near-black (#101013) when overhead.
-  // Updates every frame as a MotionValue, no React re-renders.
+  // White (#FFFFFF) → pure black (#000000) for body copy. Aggressive: text
+  // bottoms out at full black when the orb is dead overhead.
   const textColor = useTransform(orbProximity, (p) => {
-    const v = Math.round(255 - p * 235);
+    const v = Math.round(255 * (1 - p));
     return `rgb(${v}, ${v}, ${v})`;
+  });
+
+  // Brand cyan (#06B6D4) → near-black (#0B0B0C) for the eyebrow tags.
+  // Keeps the cyan brand identity at rest, but darkens to disappear into
+  // the orb's brightness when the light is overhead.
+  const eyebrowColor = useTransform(orbProximity, (p) => {
+    const r = Math.round(6 + (11 - 6) * p);
+    const g = Math.round(182 + (11 - 182) * p);
+    const b = Math.round(212 + (12 - 212) * p);
+    return `rgb(${r}, ${g}, ${b})`;
   });
 
   const contactValid = useMemo(() => {
@@ -226,6 +238,7 @@ export function WaitlistForm() {
           canContinue={contactValid}
           onContinue={goNext}
           textColor={textColor}
+          eyebrowColor={eyebrowColor}
         />
       );
     }
@@ -241,6 +254,7 @@ export function WaitlistForm() {
           questionNumber={qIndex + 1}
           totalQuestions={QUESTIONS.length}
           textColor={textColor}
+          eyebrowColor={eyebrowColor}
           onSelect={(letter) => {
             if (advanceLock.current) return;
             advanceLock.current = true;
@@ -312,21 +326,25 @@ export function WaitlistForm() {
         <div className="relative p-8 sm:p-10">
           {/* Header row */}
           {!submitted && (
-            <div className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em] text-white/40">
+            <motion.div
+              style={{ color: textColor, opacity: 0.55 }}
+              className="mb-6 flex items-center justify-between text-[10.5px] uppercase tracking-[0.22em]"
+            >
               <span>
                 Step {Math.min(step + 1, TOTAL_STEPS)}{" "}
-                <span className="text-white/20">/ {TOTAL_STEPS}</span>
+                <span style={{ opacity: 0.55 }}>/ {TOTAL_STEPS}</span>
               </span>
               {step > 0 && step < TOTAL_STEPS - 1 && (
                 <button
                   onClick={goBack}
-                  className="inline-flex items-center gap-1.5 text-white/45 transition-colors hover:text-white"
+                  className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-100"
+                  style={{ opacity: 0.85 }}
                 >
                   <ArrowLeft size={14} />
                   Back
                 </button>
               )}
-            </div>
+            </motion.div>
           )}
 
           <div className="relative min-h-[440px]">
@@ -346,10 +364,13 @@ export function WaitlistForm() {
         </div>
       </div>
 
-      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-white/40">
+      <motion.p
+        style={{ color: textColor, opacity: 0.55 }}
+        className="mt-6 flex items-center justify-center gap-2 text-xs"
+      >
         <ShieldCheck size={14} />
         Encrypted intake. Your data is never sold.
-      </p>
+      </motion.p>
     </div>
   );
 }
@@ -362,18 +383,23 @@ function ContactStep({
   canContinue,
   onContinue,
   textColor,
+  eyebrowColor,
 }: {
   contact: Contact;
   setContact: React.Dispatch<React.SetStateAction<Contact>>;
   canContinue: boolean;
   onContinue: () => void;
   textColor: MotionValue<string>;
+  eyebrowColor: MotionValue<string>;
 }) {
   return (
     <div>
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand">
+      <motion.p
+        style={{ color: eyebrowColor }}
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em]"
+      >
         The Hook
-      </p>
+      </motion.p>
       <motion.h1
         style={{ color: textColor }}
         className="mt-3 font-display text-3xl font-bold leading-[1.1] tracking-tight sm:text-[40px]"
@@ -462,6 +488,7 @@ function QuestionStep({
   questionNumber,
   totalQuestions,
   textColor,
+  eyebrowColor,
   onSelect,
 }: {
   question: Question;
@@ -469,6 +496,7 @@ function QuestionStep({
   questionNumber: number;
   totalQuestions: number;
   textColor: MotionValue<string>;
+  eyebrowColor: MotionValue<string>;
   onSelect: (letter: "A" | "B" | "C") => void;
 }) {
   return (
@@ -479,7 +507,8 @@ function QuestionStep({
     >
       <motion.p
         variants={questionItemVariants}
-        className="text-[10.5px] font-semibold uppercase tracking-[0.24em] text-cyan-brand"
+        style={{ color: eyebrowColor }}
+        className="text-[10.5px] font-semibold uppercase tracking-[0.24em]"
       >
         {question.subhead} ·{" "}
         <span className="text-white/40">
@@ -501,6 +530,7 @@ function QuestionStep({
               letter={opt.letter}
               label={opt.label}
               selected={selected === opt.letter}
+              textColor={textColor}
               onClick={() => onSelect(opt.letter)}
             />
           </motion.div>
@@ -509,7 +539,8 @@ function QuestionStep({
 
       <motion.p
         variants={questionItemVariants}
-        className="mt-6 text-xs text-white/35"
+        style={{ color: textColor, opacity: 0.55 }}
+        className="mt-6 text-xs"
       >
         Tap any answer — we'll auto-advance.
       </motion.p>
