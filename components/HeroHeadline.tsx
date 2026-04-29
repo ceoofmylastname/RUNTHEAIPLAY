@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { motion } from "framer-motion";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -10,21 +11,19 @@ const TEXT = "Join the free community";
 // ─────────────────────────────────────────────────────────
 // Each letter rotates a full 360° around the Y axis with a staggered
 // start, so the rotation reads as a continuous wave traveling left-to-
-// right across the headline. After every letter has completed, the
-// whole sequence pauses (REST_AFTER_WAVE) and then starts over.
+// right across the headline.
 //
 // Math note: framer-motion's `delay` applies only to the FIRST iteration;
-// subsequent loops use `repeatDelay`. To get a perfectly stable wave,
-// each letter's repeatDelay must equal (total cycle - duration), so
-// every letter fires its nth rotation at i*STAGGER + n*CYCLE.
+// subsequent loops use `repeatDelay`. To keep a perfectly stable wave
+// (where every letter's nth rotation lands at i*STAGGER + n*CYCLE), each
+// letter's repeatDelay must equal (cycle - duration).
 const STAGGER = 0.11;
 const DURATION = 1.55;
 const REST_AFTER_WAVE = 1.4;
 
 // Lerp HSL across the brand palette so each letter has its own subtle
 // tint — letters at the start are indigo, middle are cyan, end are
-// emerald. Adds chromatic depth without animating color, keeping the
-// motion (rotation) as the primary visual focus.
+// emerald. Keeps motion (rotation) as the primary visual focus.
 function colorFor(t: number): string {
   // Indigo-400  hsl(231, 87%, 76%)
   // Cyan-400    hsl(187, 86%, 53%)
@@ -46,12 +45,21 @@ const EXTRUSION_SHADOW = `
 `;
 
 export function HeroHeadline() {
-  const letters = TEXT.split("");
-  const total = letters.length;
-  // Total cycle = (last letter's start) + duration + rest. Used so each
-  // letter's repeatDelay = cycle - duration, regardless of its index.
-  const totalWaveTime = (total - 1) * STAGGER + DURATION;
+  // Split into words so each word can be marked `inline-block` —
+  // that prevents letters within a single word from ending up on
+  // separate lines when the headline wraps on narrow viewports.
+  // Words themselves can still wrap to new lines naturally.
+  const words = TEXT.split(" ");
+  const totalLetters = words.reduce((sum, w) => sum + w.length, 0);
+  const totalWaveTime = (totalLetters - 1) * STAGGER + DURATION;
   const cycle = totalWaveTime + REST_AFTER_WAVE;
+
+  // Pre-compute the global letter index for each (word, letter) pair so
+  // the rotation stagger flows continuously across word boundaries.
+  let runningIdx = 0;
+  const letterIndex: number[][] = words.map((word) =>
+    Array.from(word).map(() => runningIdx++)
+  );
 
   return (
     <motion.div
@@ -60,46 +68,69 @@ export function HeroHeadline() {
       transition={{ duration: 0.85, ease: EASE }}
       className="relative w-full text-center"
     >
-      {/* The visible text is broken into per-letter spans for the rotation
-          wave. We expose the full string to assistive tech via aria-label
-          on the heading and aria-hidden on each letter so screen readers
-          read the heading once, normally. */}
       <h1
         aria-label={TEXT}
-        className="font-hero text-[clamp(2.5rem,9vw,5.5rem)] leading-[0.95] tracking-[-0.04em]"
+        className={[
+          "font-hero uppercase",
+          // Responsive size that reads clean on tiny phones (1.75rem floor)
+          // through 4K (5.5rem ceiling) — uses cqw fallback to vw because
+          // CAPS at 800 weight occupies more space than mixed case.
+          "text-[clamp(1.75rem,8.5vw,5.5rem)]",
+          "leading-[0.92] tracking-[-0.035em]",
+          // Modern CSS that asks the browser to balance line breaks for
+          // visual harmony (e.g., 'JOIN THE FREE / COMMUNITY' instead of
+          // 'JOIN THE / FREE COMMUNITY'). Falls back gracefully where
+          // unsupported.
+          "[text-wrap:balance]",
+          // Horizontal padding so the wide font's 115% stretch never
+          // overflows on the smallest mobile viewports.
+          "px-2 sm:px-0",
+        ].join(" ")}
         style={{
           fontWeight: 800,
           fontStretch: "115%",
           fontVariationSettings: '"wdth" 115, "wght" 800, "opsz" 96',
         }}
       >
-        {letters.map((char, i) => {
-          const t = total > 1 ? i / (total - 1) : 0;
-          const isSpace = char === " ";
+        {words.map((word, wi) => {
+          const isLastWord = wi === words.length - 1;
           return (
-            <motion.span
-              key={i}
-              aria-hidden="true"
-              animate={{ rotateY: [0, 360] }}
-              transition={{
-                duration: DURATION,
-                delay: i * STAGGER,
-                ease: EASE,
-                repeat: Infinity,
-                repeatDelay: cycle - DURATION,
-              }}
-              style={{
-                display: "inline-block",
-                transformStyle: "preserve-3d",
-                color: isSpace ? "transparent" : colorFor(t),
-                textShadow: isSpace ? "none" : EXTRUSION_SHADOW,
-                // Reserve space for spaces (collapsed inline whitespace
-                // wouldn't have a width on its own).
-                minWidth: isSpace ? "0.32em" : undefined,
-              }}
-            >
-              {isSpace ? " " : char}
-            </motion.span>
+            <Fragment key={wi}>
+              {/* Each WORD is its own inline-block, so the browser can't
+                  break individual letters of 'COMMUNITY' onto separate
+                  lines. The whole word goes to a new line as a unit. */}
+              <span className="inline-block">
+                {Array.from(word).map((char, ci) => {
+                  const i = letterIndex[wi][ci];
+                  const t = totalLetters > 1 ? i / (totalLetters - 1) : 0;
+                  return (
+                    <motion.span
+                      key={ci}
+                      aria-hidden="true"
+                      animate={{ rotateY: [0, 360] }}
+                      transition={{
+                        duration: DURATION,
+                        delay: i * STAGGER,
+                        ease: EASE,
+                        repeat: Infinity,
+                        repeatDelay: cycle - DURATION,
+                      }}
+                      style={{
+                        display: "inline-block",
+                        transformStyle: "preserve-3d",
+                        color: colorFor(t),
+                        textShadow: EXTRUSION_SHADOW,
+                      }}
+                    >
+                      {char}
+                    </motion.span>
+                  );
+                })}
+              </span>
+              {/* Plain text space between words → THIS is the only place
+                  the browser is allowed to wrap. */}
+              {!isLastWord && " "}
+            </Fragment>
           );
         })}
       </h1>
@@ -108,7 +139,7 @@ export function HeroHeadline() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.45, ease: EASE }}
-        className="mt-5 text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-brand/80 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] sm:text-xs"
+        className="mt-5 text-[10.5px] font-semibold uppercase tracking-[0.32em] text-cyan-brand/80 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] sm:text-xs"
       >
         · Operators only · Cohort 01 ·
       </motion.p>
