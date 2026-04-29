@@ -1,5 +1,6 @@
 import Logo from "@/components/Logo";
 import WaitlistForm from "@/components/WaitlistForm";
+import HeroHeadline from "@/components/HeroHeadline";
 import { WebGLShader } from "@/components/ui/web-gl-shader";
 
 export default function Home() {
@@ -27,7 +28,8 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="relative z-10 flex min-h-[calc(100vh-96px)] items-center justify-center px-6 pb-16 sm:px-10">
+      <section className="relative z-10 flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-10 px-6 pb-16 pt-4 sm:gap-12 sm:px-10">
+        <HeroHeadline />
         <WaitlistForm />
       </section>
     </main>

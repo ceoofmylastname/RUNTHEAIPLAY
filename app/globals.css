@@ -28,6 +28,67 @@ body {
   filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.5));
 }
 
+/* ─────────────────────────────────────────────────────────
+   Three-D Headline — layered extrusion shadow + animated
+   gradient overlay via ::after (uses attr(data-text) so the
+   DOM only contains the text once)
+   ───────────────────────────────────────────────────────── */
+.three-d-headline {
+  position: relative;
+  color: #ffffff;
+  /* Stacked offset shadows fake the extrusion, then bigger blurred
+     shadows below add depth + a subtle brand-color glow */
+  text-shadow:
+    0 1px 0 #0a0a0e,
+    0 2px 0 #08080c,
+    0 3px 0 #060609,
+    0 4px 0 #040406,
+    0 6px 14px rgba(0, 0, 0, 0.65),
+    0 14px 32px rgba(6, 182, 212, 0.28),
+    0 24px 60px rgba(16, 185, 129, 0.18);
+}
+
+.three-d-headline::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    90deg,
+    #818cf8 0%,
+    #22d3ee 50%,
+    #34d399 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  text-shadow: none;
+  /* Reuses the gradient-pulse keyframe from tailwind.config.ts so the
+     hero pulses on the same rhythm as the form headlines below it. */
+  animation: gradientPulse 6s ease-in-out infinite;
+}
+
+@keyframes gradientPulse {
+  0% {
+    opacity: 0;
+    background-position: 0% 50%;
+  }
+  40% {
+    opacity: 1;
+    background-position: 80% 50%;
+  }
+  60% {
+    opacity: 1;
+    background-position: 120% 50%;
+  }
+  100% {
+    opacity: 0;
+    background-position: 200% 50%;
+  }
+}
+
 .brand-text-gradient-tri {
   background-image: linear-gradient(45deg, #4f46e5 0%, #06b6d4 50%, #10b981 100%);
   -webkit-background-clip: text;
