@@ -31,6 +31,18 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
+        // Used only for the giant 3D hero. Bricolage Grotesque is a
+        // variable display font with width + weight + optical-size axes,
+        // distinctly modern character (open apertures, slight personality
+        // in counters), and reads as expressive without going novelty.
+        hero: [
+          "Bricolage Grotesque",
+          "Space Grotesk",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       backgroundImage: {
         "brand-gradient":
