@@ -55,12 +55,30 @@ const C = {
   indigo: "#4F46E5",
 };
 
+const COMMUNITY_URL =
+  "https://theaiclub.automateai.us/communities/groups/run-the-ai-play";
+
 export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
   const greetingName = firstName?.trim() || "operator";
 
   return (
     <Html>
-      <Head />
+      <Head>
+        {/* @keyframes for the CTA button gradient pulse. Apple Mail, iOS
+            Mail, and the Gmail mobile app honor this. Outlook / Gmail web
+            ignore <style> blocks and fall back to the static gradient
+            (still gorgeous, just not animated). */}
+        <style>{`
+          @keyframes ctaPulse {
+            0%, 100% { background-position: 0% 50%; }
+            50%      { background-position: 100% 50%; }
+          }
+          .cta-pulse {
+            background-size: 200% 200% !important;
+            animation: ctaPulse 4s ease-in-out infinite;
+          }
+        `}</style>
+      </Head>
       <Preview>
         Access granted, {greetingName}. Two briefings inside — lock in your foundation.
       </Preview>
@@ -258,6 +276,122 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 doc={v.doc}
               />
             ))}
+          </Section>
+
+          {/* ───────────────────────── COMMUNITY CTA ───────────────────────── */}
+          <Section style={{ marginTop: 48, textAlign: "center" }}>
+            <Text
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                color: C.cyan,
+                textTransform: "uppercase",
+              }}
+            >
+              · Step Two · Get Inside ·
+            </Text>
+
+            <Text
+              style={{
+                margin: "10px 0 22px",
+                fontSize: 18,
+                fontWeight: 700,
+                lineHeight: 1.4,
+                color: C.text,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              Lock in lifetime access to the community.
+            </Text>
+
+            {/* The button itself — single <a> with stacked styles for max
+                client compat. The "FREE" word is rendered in a much larger
+                font with extra weight + letter-spacing so it pops as the
+                primary visual hook of the email. */}
+            <Link
+              href={COMMUNITY_URL}
+              target="_blank"
+              className="cta-pulse"
+              style={{
+                display: "inline-block",
+                padding: "20px 32px",
+                borderRadius: 18,
+                background:
+                  "linear-gradient(90deg, #4F46E5 0%, #06B6D4 50%, #10B981 100%)",
+                backgroundSize: "200% 200%",
+                textDecoration: "none",
+                color: C.text,
+                // Multi-layer shadow:
+                //   1. inner top highlight (lit edge)
+                //   2. inner bottom shadow (sculpted depth)
+                //   3. layered cyan + emerald drop shadows (lifted glow)
+                //   4. crisp 1px white ring for definition
+                boxShadow: `
+                  0 0 0 1px rgba(255,255,255,0.20),
+                  inset 0 1px 0 rgba(255,255,255,0.55),
+                  inset 0 -2px 0 rgba(0,0,0,0.30),
+                  0 16px 36px -10px rgba(6,182,212,0.65),
+                  0 28px 60px -16px rgba(16,185,129,0.55)
+                `,
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: C.text,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  verticalAlign: "middle",
+                }}
+              >
+                Join the
+              </span>
+              {/* FREE — the visual hero of the button */}
+              <span
+                style={{
+                  display: "inline-block",
+                  fontSize: 30,
+                  fontWeight: 900,
+                  color: C.text,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  margin: "0 10px",
+                  verticalAlign: "middle",
+                  textShadow:
+                    "0 2px 14px rgba(255,255,255,0.45), 0 0 30px rgba(6,182,212,0.4)",
+                }}
+              >
+                FREE
+              </span>
+              <span
+                style={{
+                  display: "inline-block",
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: C.text,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  verticalAlign: "middle",
+                }}
+              >
+                Community →
+              </span>
+            </Link>
+
+            <Text
+              style={{
+                margin: "16px 0 0",
+                fontSize: 11,
+                color: C.muted,
+                letterSpacing: "0.04em",
+              }}
+            >
+              No credit card · Operators only · Cohort 01
+            </Text>
           </Section>
 
           {/* ───────────────────────── DIVIDER ───────────────────────── */}
