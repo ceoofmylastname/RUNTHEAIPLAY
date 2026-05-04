@@ -80,7 +80,8 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
         `}</style>
       </Head>
       <Preview>
-        Access granted, {greetingName}. Two briefings inside — lock in your foundation.
+        You're in, {greetingName}. Click the button to step inside the
+        Run The AI Play community — it's live now.
       </Preview>
       <Body
         style={{
@@ -207,7 +208,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 backgroundColor: "rgba(6,182,212,0.08)",
               }}
             >
-              · Cohort 01 · Access Granted
+              · The Community Is Live ·
             </span>
           </Section>
 
@@ -225,7 +226,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 textAlign: "center",
               }}
             >
-              Access Granted
+              You're in
               {firstName ? (
                 <>
                   ,{" "}
@@ -245,7 +246,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
               ) : null}
               .
               <br />
-              Welcome to the baseline.
+              Step inside the community.
             </Heading>
 
             <Text
@@ -258,54 +259,14 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 textAlign: "center",
               }}
             >
-              You are officially inside Run The AI Play. We don't build
-              brochures here — we build semantic infrastructure and automated
-              systems. Your first step is to lock in your foundation. Watch the
-              two briefings below.
+              Run The AI Play is live. Click the button below to enter —
+              that's all you need to do. Once you're inside, the operators,
+              the playbooks, and every replay are waiting.
             </Text>
           </Section>
 
-          {/* ───────────────────────── VIDEO CARDS ───────────────────────── */}
-          <Section style={{ marginTop: 36 }}>
-            {VIDEOS.map((v) => (
-              <VideoCard
-                key={v.href}
-                eyebrow={v.eyebrow}
-                title={v.title}
-                href={v.href}
-                doc={v.doc}
-              />
-            ))}
-          </Section>
-
-          {/* ───────────────────────── COMMUNITY CTA ───────────────────────── */}
-          <Section style={{ marginTop: 48, textAlign: "center" }}>
-            <Text
-              style={{
-                margin: 0,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.22em",
-                color: C.cyan,
-                textTransform: "uppercase",
-              }}
-            >
-              · Step Two · Get Inside ·
-            </Text>
-
-            <Text
-              style={{
-                margin: "10px 0 22px",
-                fontSize: 18,
-                fontWeight: 700,
-                lineHeight: 1.4,
-                color: C.text,
-                letterSpacing: "-0.3px",
-              }}
-            >
-              Lock in lifetime access to the community.
-            </Text>
-
+          {/* ────────────────── PRIMARY CTA — go now ────────────────── */}
+          <Section style={{ marginTop: 36, textAlign: "center" }}>
             {/* The button itself — single <a> with stacked styles for max
                 client compat. The "FREE" word is rendered in a much larger
                 font with extra weight + letter-spacing so it pops as the
@@ -316,7 +277,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
               className="cta-pulse"
               style={{
                 display: "inline-block",
-                padding: "20px 32px",
+                padding: "22px 36px",
                 borderRadius: 18,
                 background:
                   "linear-gradient(90deg, #4F46E5 0%, #06B6D4 50%, #10B981 100%)",
@@ -324,10 +285,10 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 textDecoration: "none",
                 color: C.text,
                 // Multi-layer shadow:
-                //   1. inner top highlight (lit edge)
-                //   2. inner bottom shadow (sculpted depth)
-                //   3. layered cyan + emerald drop shadows (lifted glow)
-                //   4. crisp 1px white ring for definition
+                //   1. crisp 1px white ring for definition
+                //   2. inner top highlight (lit edge)
+                //   3. inner bottom shadow (sculpted depth)
+                //   4. layered cyan + emerald drop shadows (lifted glow)
                 boxShadow: `
                   0 0 0 1px rgba(255,255,255,0.20),
                   inset 0 1px 0 rgba(255,255,255,0.55),
@@ -354,7 +315,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
               <span
                 style={{
                   display: "inline-block",
-                  fontSize: 30,
+                  fontSize: 32,
                   fontWeight: 900,
                   color: C.text,
                   letterSpacing: "0.06em",
@@ -390,8 +351,36 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 letterSpacing: "0.04em",
               }}
             >
-              No credit card · Operators only · Cohort 01
+              No credit card · One click · You're in
             </Text>
+          </Section>
+
+          {/* ────────── INSIDE-THE-COMMUNITY content (videos) ────────── */}
+          <Section style={{ marginTop: 48 }}>
+            <Text
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                color: C.cyan,
+                textTransform: "uppercase",
+                textAlign: "center",
+              }}
+            >
+              · Once You're Inside, Run These Plays ·
+            </Text>
+            <div style={{ marginTop: 18 }}>
+              {VIDEOS.map((v) => (
+                <VideoCard
+                  key={v.href}
+                  eyebrow={v.eyebrow}
+                  title={v.title}
+                  href={v.href}
+                  doc={v.doc}
+                />
+              ))}
+            </div>
           </Section>
 
           {/* ───────────────────────── DIVIDER ───────────────────────── */}
@@ -450,8 +439,7 @@ export function WelcomeEmail({ firstName }: WelcomeEmailProps) {
                 color: C.muted,
               }}
             >
-              You're receiving this because you registered for the Run The AI
-              Play community.{" "}
+              You're receiving this because you joined Run The AI Play.{" "}
               <Link
                 href="{{unsubscribe_url}}"
                 style={{ color: C.muted, textDecoration: "underline" }}

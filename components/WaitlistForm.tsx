@@ -563,7 +563,7 @@ function CompletionStep({
           as="h2"
           className="mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl"
         >
-          Welcome to the Run The AI Play community.
+          You're in. Check your email.
         </RotatingHeadline>
       </motion.div>
       <motion.p
@@ -572,8 +572,8 @@ function CompletionStep({
         transition={{ duration: 0.5, delay: 0.85, ease: EASE }}
         className="mt-5 max-w-md text-[15px] font-medium leading-relaxed text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
       >
-        Your invite to join the community lands in your inbox within the
-        next few days.
+        Your button to join the Run The AI Play community is sitting in
+        your inbox right now. Click it and you're inside.
       </motion.p>
       <motion.p
         initial={{ opacity: 0, y: 8 }}
@@ -581,9 +581,9 @@ function CompletionStep({
         transition={{ duration: 0.5, delay: 1.05, ease: EASE }}
         className="mt-3 max-w-md text-sm font-medium leading-relaxed text-white/70 drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]"
       >
-        Until then, watch your inbox — we're sending the replay of our most
-        recent training. Once the community is live, every replay will live
-        there.
+        Don't see it in 2 minutes? Check your spam folder — and add
+        welcome@go.runtheaiplay.com to your contacts so the next email
+        lands cleanly.
       </motion.p>
     </motion.div>
   );

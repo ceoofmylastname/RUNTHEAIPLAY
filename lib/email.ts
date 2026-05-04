@@ -57,8 +57,8 @@ export async function sendWelcomeEmail({
     const text = await render(WelcomeEmail({ firstName }), { plainText: true });
 
     const subject = firstName
-      ? `Access granted, ${firstName}. Welcome to Run The AI Play.`
-      : "Access granted. Welcome to Run The AI Play.";
+      ? `${firstName}, you're in. Step inside Run The AI Play →`
+      : "You're in. Step inside Run The AI Play →";
 
     console.log("[email] calling Resend resend.emails.send()…", { from, to });
 
