@@ -8,14 +8,28 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        gotham: "#050505",
+        gotham: "#06060c",
+        // Legacy brand (kept for emails + admin)
         indigo: { brand: "#4F46E5" },
         cyan: { brand: "#06B6D4" },
         green: { brand: "#10B981" },
+        // Funnel v2 palette
+        funnel: {
+          bg: "#06060c",
+          surface: "#0f0f1a",
+          purple: "#8b5cf6",
+          purpleLight: "#a78bfa",
+          pink: "#ec4899",
+          teal: "#22d3ee",
+          green: "#10b981",
+          text: "#f0eeff",
+          muted: "#8880aa",
+          mutedDark: "#4a4860",
+          error: "#f43f5e",
+        },
       },
       fontFamily: {
         sans: [
-          "Space Grotesk",
           "Inter",
           "ui-sans-serif",
           "system-ui",
@@ -25,19 +39,23 @@ const config: Config = {
           "sans-serif",
         ],
         display: [
-          "Space Grotesk",
+          "Bebas Neue",
           "Inter",
           "ui-sans-serif",
           "system-ui",
           "sans-serif",
         ],
-        // Used only for the giant 3D hero. Bricolage Grotesque is a
-        // variable display font with width + weight + optical-size axes,
-        // distinctly modern character (open apertures, slight personality
-        // in counters), and reads as expressive without going novelty.
+        mono: [
+          "JetBrains Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
         hero: [
-          "Bricolage Grotesque",
-          "Space Grotesk",
+          "Bebas Neue",
           "Inter",
           "ui-sans-serif",
           "system-ui",
@@ -45,10 +63,12 @@ const config: Config = {
         ],
       },
       backgroundImage: {
-        "brand-gradient":
-          "linear-gradient(45deg, #4F46E5 0%, #06B6D4 50%, #10B981 100%)",
-        "brand-gradient-cyan-emerald":
-          "linear-gradient(90deg, #06B6D4 0%, #10B981 100%)",
+        "funnel-hero":
+          "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)",
+        "funnel-cta":
+          "linear-gradient(135deg, #22d3ee 0%, #8b5cf6 100%)",
+        "funnel-divider":
+          "linear-gradient(90deg, #8b5cf6 0%, #ec4899 50%, #22d3ee 100%)",
       },
       keyframes: {
         pulseGlow: {
@@ -63,19 +83,32 @@ const config: Config = {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
-        // Used by the gradient overlay layered over a white headline.
-        // Fades the multi-color gradient in (revealing colored text) and
-        // back out (revealing the white text underneath), while also
-        // sweeping the background-position so the colors themselves move
-        // when visible. White → moving gradient → white, on a loop.
-        // The 40–60% plateau holds the gradient at full opacity through
-        // the middle of the cycle (~1.2s at 6s duration) so the colors
-        // get to land instead of just flicker through.
         gradientPulse: {
-          "0%":   { opacity: "0", backgroundPosition: "0% 50%" },
-          "40%":  { opacity: "1", backgroundPosition: "80% 50%" },
-          "60%":  { opacity: "1", backgroundPosition: "120% 50%" },
+          "0%": { opacity: "0", backgroundPosition: "0% 50%" },
+          "40%": { opacity: "1", backgroundPosition: "80% 50%" },
+          "60%": { opacity: "1", backgroundPosition: "120% 50%" },
           "100%": { opacity: "0", backgroundPosition: "200% 50%" },
+        },
+        orbFloat1: {
+          "0%": { transform: "translate(0, 0) scale(1)" },
+          "100%": { transform: "translate(-60px, 80px) scale(1.08)" },
+        },
+        orbFloat2: {
+          "0%": { transform: "translate(0, 0) scale(1)" },
+          "100%": { transform: "translate(70px, -60px) scale(1.12)" },
+        },
+        orbFloat3: {
+          "0%": { transform: "translate(0, 0) scale(1)" },
+          "100%": { transform: "translate(40px, 50px) scale(0.92)" },
+        },
+        ctaPulse: {
+          "0%, 100%": {
+            boxShadow: "0 8px 32px rgba(139,92,246,0.3)",
+          },
+          "50%": {
+            boxShadow:
+              "0 8px 32px rgba(139,92,246,0.55), 0 0 32px rgba(34,211,238,0.35)",
+          },
         },
       },
       animation: {
@@ -83,6 +116,10 @@ const config: Config = {
         "border-shimmer": "borderShimmer 4s ease-in-out infinite",
         gradient: "gradient 6s ease-in-out infinite",
         "gradient-pulse": "gradientPulse 6s ease-in-out infinite",
+        "orb-1": "orbFloat1 8s ease-in-out infinite alternate",
+        "orb-2": "orbFloat2 10s ease-in-out infinite alternate-reverse",
+        "orb-3": "orbFloat3 12s ease-in-out infinite alternate",
+        "cta-pulse": "ctaPulse 2s ease-in-out infinite",
       },
     },
   },

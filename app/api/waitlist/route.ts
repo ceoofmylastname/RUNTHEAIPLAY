@@ -5,6 +5,9 @@ import { sendWelcomeEmail } from "@/lib/email";
 
 export const runtime = "edge";
 
+// ─────────────────────────────────────────────────────────
+// Funnel v2 payload — matches the 5-step application funnel
+// ─────────────────────────────────────────────────────────
 type Payload = {
   contact?: {
     firstName?: string;
@@ -13,16 +16,21 @@ type Payload = {
     phone?: string;
   };
   answers?: {
-    aiWebsites?: string;
-    knowledge?: string;
-    copywriting?: string;
-    dataSystems?: string;
-    bigPicture?: string;
+    role?: string;
+    aiUse?: string;
+    primaryPlatform?: string;
+    monthlyRevenue?: string;
+    aiExperience?: string;
+    biggestBlocker?: string;
+    whyIn?: string;
+    referralSource?: string;
+    referralName?: string;
   };
 };
 
-const VALID_LETTERS = new Set(["A", "B", "C"]);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// At least 20 chars for the long-form textareas (matches client-side validation)
+const MIN_LONGFORM = 20;
 
 function bad(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -39,6 +47,7 @@ export async function POST(req: Request) {
   const c = body.contact ?? {};
   const a = body.answers ?? {};
 
+  // ── Contact validation ──
   const firstName = c.firstName?.trim();
   const lastName = c.lastName?.trim();
   const email = c.email?.trim().toLowerCase();
@@ -46,33 +55,49 @@ export async function POST(req: Request) {
 
   if (!firstName || !lastName) return bad("First and last name are required.");
   if (!email || !EMAIL_RE.test(email)) return bad("Valid email required.");
-  if (!phone || phone.length < 7) return bad("Valid phone required.");
-
-  const { aiWebsites, knowledge, copywriting, dataSystems, bigPicture } = a;
-  for (const [k, v] of Object.entries({
-    aiWebsites,
-    knowledge,
-    copywriting,
-    dataSystems,
-    bigPicture,
-  })) {
-    if (!v || !VALID_LETTERS.has(v)) {
-      return bad(`Missing or invalid answer: ${k}`);
-    }
+  if (!phone || phone.replace(/\D/g, "").length < 10) {
+    return bad("Phone must be 10+ digits.");
   }
+
+  // ── Application validation ──
+  const role = a.role?.trim();
+  const aiUse = a.aiUse?.trim();
+  const primaryPlatform = a.primaryPlatform?.trim();
+  const monthlyRevenue = a.monthlyRevenue?.trim();
+  const aiExperience = a.aiExperience?.trim();
+  const biggestBlocker = a.biggestBlocker?.trim();
+  const whyIn = a.whyIn?.trim();
+  const referralSource = a.referralSource?.trim();
+  const referralName = a.referralName?.trim() || null;
+
+  if (!role) return bad("Role/title required.");
+  if (!aiUse || aiUse.length < MIN_LONGFORM) {
+    return bad("AI use answer too short — please describe in more detail.");
+  }
+  if (!primaryPlatform) return bad("Pick your primary platform.");
+  if (!monthlyRevenue) return bad("Pick your revenue band.");
+  if (!aiExperience) return bad("Pick your AI experience.");
+  if (!biggestBlocker || biggestBlocker.length < MIN_LONGFORM) {
+    return bad("Biggest blocker answer too short — please describe in more detail.");
+  }
+  if (!whyIn || whyIn.length < MIN_LONGFORM) {
+    return bad("Why-in answer too short — tell us what you'll bring.");
+  }
+  if (!referralSource) return bad("Pick how you found us.");
 
   console.log("[waitlist] POST received — payload validated:", {
     email,
     firstName,
-    answers: { aiWebsites, knowledge, copywriting, dataSystems, bigPicture },
+    role,
+    primaryPlatform,
+    monthlyRevenue,
+    referralSource,
   });
 
   try {
     console.log("[waitlist] getting Prisma client (D1)…");
     const prisma = getPrisma();
 
-    // Pre-check existence so we only send the welcome email on the user's
-    // FIRST submission (re-submissions update their record but don't re-spam).
     console.log("[waitlist] querying for existing user…");
     const existing = await prisma.user.findUnique({
       where: { email },
@@ -81,7 +106,7 @@ export async function POST(req: Request) {
     const isNew = !existing;
     console.log("[waitlist] existing user check:", { isNew });
 
-    console.log("[waitlist] upserting user + answers…");
+    console.log("[waitlist] upserting user + application…");
     const user = await prisma.user.upsert({
       where: { email },
       create: {
@@ -89,13 +114,17 @@ export async function POST(req: Request) {
         lastName,
         email,
         phone,
-        answers: {
+        application: {
           create: {
-            aiWebsites: aiWebsites!,
-            knowledge: knowledge!,
-            copywriting: copywriting!,
-            dataSystems: dataSystems!,
-            bigPicture: bigPicture!,
+            role: role!,
+            aiUse: aiUse!,
+            primaryPlatform: primaryPlatform!,
+            monthlyRevenue: monthlyRevenue!,
+            aiExperience: aiExperience!,
+            biggestBlocker: biggestBlocker!,
+            whyIn: whyIn!,
+            referralSource: referralSource!,
+            referralName,
           },
         },
       },
@@ -103,46 +132,44 @@ export async function POST(req: Request) {
         firstName,
         lastName,
         phone,
-        answers: {
+        application: {
           upsert: {
             create: {
-              aiWebsites: aiWebsites!,
-              knowledge: knowledge!,
-              copywriting: copywriting!,
-              dataSystems: dataSystems!,
-              bigPicture: bigPicture!,
+              role: role!,
+              aiUse: aiUse!,
+              primaryPlatform: primaryPlatform!,
+              monthlyRevenue: monthlyRevenue!,
+              aiExperience: aiExperience!,
+              biggestBlocker: biggestBlocker!,
+              whyIn: whyIn!,
+              referralSource: referralSource!,
+              referralName,
             },
             update: {
-              aiWebsites: aiWebsites!,
-              knowledge: knowledge!,
-              copywriting: copywriting!,
-              dataSystems: dataSystems!,
-              bigPicture: bigPicture!,
+              role: role!,
+              aiUse: aiUse!,
+              primaryPlatform: primaryPlatform!,
+              monthlyRevenue: monthlyRevenue!,
+              aiExperience: aiExperience!,
+              biggestBlocker: biggestBlocker!,
+              whyIn: whyIn!,
+              referralSource: referralSource!,
+              referralName,
             },
           },
         },
       },
-      include: { answers: true },
+      include: { application: true },
     });
 
     console.log("[waitlist] ✓ DB upsert succeeded:", { userId: user.id });
 
     if (isNew) {
-      // CRITICAL: on Cloudflare's edge runtime, a bare `void` fire-and-forget
-      // promise gets killed the moment the response is returned — the
-      // isolate terminates before Resend's HTTP call can finish, so the
-      // email silently never goes out. The fix is `ctx.waitUntil()`, which
-      // tells Cloudflare to keep the isolate alive until the passed promise
-      // resolves. The HTTP response still returns immediately to the user
-      // (form shows confetti instantly); only the background work is
-      // extended.
       try {
         const { ctx } = getRequestContext();
         ctx.waitUntil(sendWelcomeEmail({ to: email, firstName }));
         console.log("[waitlist] new user — email queued via ctx.waitUntil");
       } catch (waitErr) {
-        // Fallback for environments where getRequestContext is unavailable
-        // (shouldn't happen on Pages but useful in tests / odd setups).
         console.warn(
           "[waitlist] ctx.waitUntil unavailable, falling back to void:",
           waitErr

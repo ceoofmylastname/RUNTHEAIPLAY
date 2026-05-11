@@ -14,7 +14,7 @@ export default async function AdminPage() {
 
   const prisma = getPrisma();
   const leads = await prisma.user.findMany({
-    include: { answers: true },
+    include: { application: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -26,13 +26,17 @@ export default async function AdminPage() {
     email: u.email,
     phone: u.phone,
     createdAt: u.createdAt.toISOString(),
-    answers: u.answers
+    application: u.application
       ? {
-          aiWebsites: u.answers.aiWebsites,
-          knowledge: u.answers.knowledge,
-          copywriting: u.answers.copywriting,
-          dataSystems: u.answers.dataSystems,
-          bigPicture: u.answers.bigPicture,
+          role: u.application.role,
+          aiUse: u.application.aiUse,
+          primaryPlatform: u.application.primaryPlatform,
+          monthlyRevenue: u.application.monthlyRevenue,
+          aiExperience: u.application.aiExperience,
+          biggestBlocker: u.application.biggestBlocker,
+          whyIn: u.application.whyIn,
+          referralSource: u.application.referralSource,
+          referralName: u.application.referralName,
         }
       : null,
   }));

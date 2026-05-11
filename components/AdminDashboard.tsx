@@ -13,6 +13,18 @@ import {
   Users,
 } from "lucide-react";
 
+type Application = {
+  role: string;
+  aiUse: string;
+  primaryPlatform: string;
+  monthlyRevenue: string;
+  aiExperience: string;
+  biggestBlocker: string;
+  whyIn: string;
+  referralSource: string;
+  referralName: string | null;
+};
+
 type Lead = {
   id: string;
   firstName: string;
@@ -20,74 +32,20 @@ type Lead = {
   email: string;
   phone: string;
   createdAt: string;
-  answers: {
-    aiWebsites: string;
-    knowledge: string;
-    copywriting: string;
-    dataSystems: string;
-    bigPicture: string;
-  } | null;
+  application: Application | null;
 };
 
-const QUESTION_LABELS: Record<keyof NonNullable<Lead["answers"]>, string> = {
-  aiWebsites: "AI Websites — Traditional vs AI-native",
-  knowledge: "Knowledge & Note-Taking",
-  copywriting: "Copywriting & Execution Environment",
-  dataSystems: "Data & Systems",
-  bigPicture: "Big Picture — Goal for AI in Marketing",
+const FIELD_LABELS: Record<keyof Application, string> = {
+  role: "Role / Title",
+  aiUse: "Primary AI Use",
+  primaryPlatform: "Primary Platform",
+  monthlyRevenue: "Monthly Revenue from AI",
+  aiExperience: "AI Experience",
+  biggestBlocker: "Biggest Blocker",
+  whyIn: "Why They Want In",
+  referralSource: "Referral Source",
+  referralName: "Referrer Name",
 };
-
-const QUESTION_OPTIONS: Record<
-  keyof NonNullable<Lead["answers"]>,
-  Record<"A" | "B" | "C", string>
-> = {
-  aiWebsites: {
-    A: "AI websites are built faster using visual drag-and-drop builders.",
-    B: "AI websites have personalized chatbots installed on the homepage.",
-    C: "AI websites are structurally engineered with semantic data for LLMs to cite them.",
-  },
-  knowledge: {
-    A: "Paper notebooks and scattered Google Docs.",
-    B: "Basic linear note-takers (Apple Notes, Google Keep, Evernote).",
-    C: "An interconnected knowledge base (like Obsidian) to map contextual relationships.",
-  },
-  copywriting: {
-    A: "I ask standard ChatGPT to write the whole thing for me.",
-    B: "I use Claude Chat for basic formatting and tone adjustments.",
-    C: "I use advanced environments like Claude Co-work or Claude Code to build and refine specific frameworks.",
-  },
-  dataSystems: {
-    A: "I don't. That's too technical for me.",
-    B: "I use no-code tools like Zapier or Make to connect basic apps.",
-    C: "I run custom Python scripts in Jupyter Notebooks or use agentic coding tools.",
-  },
-  bigPicture: {
-    A: "Generating endless amounts of blog posts and social media content.",
-    B: "Firing my current team to save money on payroll.",
-    C: "Building automated systems that scale revenue and client fulfillment without scaling headcount.",
-  },
-};
-
-function technicalScore(a: Lead["answers"]): number {
-  if (!a) return 0;
-  const map: Record<string, number> = { A: 0, B: 1, C: 2 };
-  return (
-    (map[a.aiWebsites] ?? 0) +
-    (map[a.knowledge] ?? 0) +
-    (map[a.copywriting] ?? 0) +
-    (map[a.dataSystems] ?? 0) +
-    (map[a.bigPicture] ?? 0)
-  );
-}
-
-function scoreTier(score: number) {
-  // Max score = 10 (5 questions × 2 max)
-  if (score >= 8)
-    return { label: "Operator", className: "from-green-brand to-cyan-brand" };
-  if (score >= 5)
-    return { label: "Practitioner", className: "from-cyan-brand to-indigo-brand" };
-  return { label: "Beginner", className: "from-indigo-brand to-indigo-brand" };
-}
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -100,9 +58,10 @@ function formatDate(iso: string) {
   });
 }
 
-function csvEscape(value: string): string {
-  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
+function csvEscape(value: string | null | undefined): string {
+  const v = value ?? "";
+  if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+  return v;
 }
 
 function leadsToCsv(leads: Lead[]): string {
@@ -112,28 +71,34 @@ function leadsToCsv(leads: Lead[]): string {
     "Email",
     "Phone",
     "Submitted At",
-    "Score",
-    "AI Websites",
-    "Knowledge",
-    "Copywriting",
-    "Data Systems",
-    "Big Picture",
+    "Role",
+    "Primary Platform",
+    "Monthly Revenue",
+    "AI Experience",
+    "Referral Source",
+    "Referrer Name",
+    "AI Use",
+    "Biggest Blocker",
+    "Why In",
   ].join(",");
 
   const rows = leads.map((l) => {
-    const a = l.answers;
+    const a = l.application;
     return [
       l.firstName,
       l.lastName,
       l.email,
       l.phone,
       l.createdAt,
-      String(technicalScore(a)),
-      a?.aiWebsites ?? "",
-      a?.knowledge ?? "",
-      a?.copywriting ?? "",
-      a?.dataSystems ?? "",
-      a?.bigPicture ?? "",
+      a?.role ?? "",
+      a?.primaryPlatform ?? "",
+      a?.monthlyRevenue ?? "",
+      a?.aiExperience ?? "",
+      a?.referralSource ?? "",
+      a?.referralName ?? "",
+      a?.aiUse ?? "",
+      a?.biggestBlocker ?? "",
+      a?.whyIn ?? "",
     ]
       .map(csvEscape)
       .join(",");
@@ -163,7 +128,8 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
     const q = query.trim().toLowerCase();
     if (!q) return initialLeads;
     return initialLeads.filter((l) =>
-      [l.firstName, l.lastName, l.email, l.phone]
+      [l.firstName, l.lastName, l.email, l.phone, l.application?.role]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(q)
@@ -199,7 +165,7 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
           <h1 className="text-2xl font-bold tracking-tight">Operator Console</h1>
           <p className="mt-1 flex items-center gap-2 text-sm text-white/55">
             <Users size={14} />
-            {initialLeads.length} total leads
+            {initialLeads.length} total applications
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
@@ -211,7 +177,7 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, email, phone…"
+              placeholder="Search name, email, role…"
               className="input-base !py-2.5 !pl-9 sm:w-72"
             />
           </div>
@@ -234,31 +200,29 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
 
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-        <div className="grid grid-cols-[1.4fr_1.6fr_1.2fr_0.9fr_0.9fr_40px] items-center gap-3 border-b border-white/[0.06] bg-white/[0.02] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+        <div className="grid grid-cols-[1.4fr_1.8fr_1.1fr_1.2fr_0.9fr_40px] items-center gap-3 border-b border-white/[0.06] bg-white/[0.02] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
           <div>Name</div>
           <div>Email</div>
           <div>Phone</div>
+          <div>Role</div>
           <div>Submitted</div>
-          <div>Score</div>
           <div />
         </div>
 
         {filtered.length === 0 && (
           <div className="px-5 py-16 text-center text-sm text-white/45">
-            No leads match your filter yet.
+            No applications match your filter yet.
           </div>
         )}
 
         <ul className="divide-y divide-white/[0.04]">
           {filtered.map((lead) => {
-            const score = technicalScore(lead.answers);
-            const tier = scoreTier(score);
             const isOpen = expanded.has(lead.id);
             return (
               <li key={lead.id} className="group">
                 <button
                   onClick={() => toggleRow(lead.id)}
-                  className="grid w-full grid-cols-[1.4fr_1.6fr_1.2fr_0.9fr_0.9fr_40px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
+                  className="grid w-full grid-cols-[1.4fr_1.8fr_1.1fr_1.2fr_0.9fr_40px] items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
                 >
                   <div className="font-medium text-white">
                     {lead.firstName} {lead.lastName}
@@ -271,15 +235,11 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
                     <Phone size={13} className="text-white/35" />
                     <span className="truncate">{lead.phone}</span>
                   </div>
+                  <div className="truncate text-sm text-white/70">
+                    {lead.application?.role ?? "—"}
+                  </div>
                   <div className="text-sm text-white/55">
                     {formatDate(lead.createdAt)}
-                  </div>
-                  <div>
-                    <span
-                      className={`inline-flex items-center gap-2 rounded-full bg-gradient-to-r ${tier.className} px-2.5 py-1 text-[11px] font-semibold text-white`}
-                    >
-                      {tier.label} · {score}/8
-                    </span>
                   </div>
                   <div className="flex justify-end">
                     <ChevronDown
@@ -302,38 +262,30 @@ export function AdminDashboard({ initialLeads }: { initialLeads: Lead[] }) {
                       className="overflow-hidden"
                     >
                       <div className="border-t border-white/[0.04] bg-black/30 px-5 py-5">
-                        {!lead.answers ? (
+                        {!lead.application ? (
                           <p className="text-sm text-white/45">
-                            No assessment answers recorded.
+                            No application data on file.
                           </p>
                         ) : (
                           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             {(
-                              Object.keys(QUESTION_LABELS) as Array<
-                                keyof NonNullable<Lead["answers"]>
+                              Object.keys(FIELD_LABELS) as Array<
+                                keyof Application
                               >
                             ).map((key) => {
-                              const letter = lead.answers![key] as
-                                | "A"
-                                | "B"
-                                | "C";
-                              const text = QUESTION_OPTIONS[key][letter];
+                              const value = lead.application![key];
+                              if (!value) return null;
                               return (
                                 <div
                                   key={key}
                                   className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4"
                                 >
-                                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-brand">
-                                    {QUESTION_LABELS[key]}
+                                  <p className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-cyan-brand">
+                                    {FIELD_LABELS[key]}
                                   </p>
-                                  <div className="mt-2 flex items-start gap-3">
-                                    <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-gradient text-[12px] font-bold text-white">
-                                      {letter}
-                                    </span>
-                                    <p className="text-sm leading-snug text-white/85">
-                                      {text}
-                                    </p>
-                                  </div>
+                                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/85">
+                                    {value}
+                                  </p>
                                 </div>
                               );
                             })}

@@ -12,7 +12,7 @@ export async function GET() {
 
   const prisma = getPrisma();
   const users = await prisma.user.findMany({
-    include: { answers: true },
+    include: { application: true },
     orderBy: { createdAt: "desc" },
   });
 

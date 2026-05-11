@@ -14,23 +14,30 @@ datasource db {
 }
 
 model User {
-  id        String             @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String             @unique
-  phone     String
-  createdAt DateTime           @default(now())
-  answers   AssessmentAnswers?
+  id          String              @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String              @unique
+  phone       String
+  createdAt   DateTime            @default(now())
+  application ApplicationAnswers?
 }
 
-model AssessmentAnswers {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  aiWebsites  String
-  knowledge   String
-  copywriting String
-  dataSystems String
-  bigPicture  String
-  createdAt   DateTime @default(now())
+// Cohort 01 application answers — collected from the multi-step funnel
+// on the home page. Replaces the previous AssessmentAnswers schema; the
+// old questionnaire columns are dropped during the migration.
+model ApplicationAnswers {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            String
+  aiUse           String
+  primaryPlatform String
+  monthlyRevenue  String
+  aiExperience    String
+  biggestBlocker  String
+  whyIn           String
+  referralSource  String
+  referralName    String?
+  createdAt       DateTime @default(now())
 }
